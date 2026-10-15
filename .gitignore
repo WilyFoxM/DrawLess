@@ -1,0 +1,57 @@
+.gradle/
+build/
+run/
+.kotlin/
+out/
+bin/
+
+# Local editor and agent state
+.idea/
+.vscode/
+.codex/
+.codex_tmp/
+*.iml
+
+# Tests, fixtures and local validation
+/src/test/
+/src/gametest/
+/src/integrationTest/
+/src/testFixtures/
+/tests/
+/qa/
+test-results/
+coverage/
+
+# Reports, recordings and temporary files
+reports/
+drawless-reports/
+profiler/
+tmp/
+temp/
+*.log
+*.jfr
+*.hprof
+hs_err_*.log
+replay_pid*.log
+*.tmp
+*.bak
+*.orig
+*.rej
+*.zip
+*.rar
+*.7z
+*.jar
+
+# Local credentials and OS metadata
+.env
+.env.*
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Only the root README belongs in the repository
+*.[mM][dD]
+!/README.md
+
+# Keep the Gradle wrapper required for builds
+!gradle/wrapper/gradle-wrapper.jar

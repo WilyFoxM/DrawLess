@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "drawless",
+  "version": "${version}",
+  "name": "DrawLess",
+  "description": "Client-side rendering optimizations for Item Display scenes and particles.",
+  "authors": [
+    "WilyFox"
+  ],
+  "license": "MIT",
+  "environment": "client",
+  "icon": "assets/drawless/icon.png",
+  "entrypoints": {
+    "client": [
+      "ru.wilyfox.drawless.DrawLess"
+    ]
+  },
+  "mixins": [
+    "drawless.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "~26.2",
+    "java": ">=25",
+    "fabric-api": ">=0.161.0"
+  },
+  "suggests": {
+    "sodium": "*"
+  }
+}
