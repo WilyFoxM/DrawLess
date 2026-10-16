@@ -1,0 +1,9 @@
+{
+  "name": "drawless-benchmark-card",
+  "private": true,
+  "version": "0.1.0",
+  "description": "SVG rasterization for the DrawLess benchmark card",
+  "dependencies": {
+    "sharp": "0.35.5"
+  }
+}

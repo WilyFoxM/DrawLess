@@ -7,6 +7,22 @@ DrawLess focuses on Item Display scenes, including animated ModelEngine NPCs. It
 local model geometry while streaming the current transforms, light and tint, then batches
 supported parts by material. Entity movement and animation ticks remain live in the default mode.
 
+[Modrinth](https://modrinth.com/mod/drawless) · [Benchmark report](benchmarks/results/spawn-20261016/report.md) · [Methodology](benchmarks/METHODOLOGY.md)
+
+## Measured performance
+
+[![DrawLess 0.1.0: +21.24% mean paired FPS improvement in the measured Item Display scene](benchmarks/results/spawn-20261016/modrinth-card.png)](benchmarks/results/spawn-20261016/report.md)
+
+One recorded Item Display spawn scene: **242.91 FPS** mean bracketed OFF baseline,
+**294.50 FPS** mean ON, **+21.24%** mean paired change across three ON comparisons.
+All seven 20-second phases are retained. Tested with Sodium, without ImmediatelyFast,
+on a Ryzen 5 5600H / RTX 3060 Laptop GPU, Minecraft 26.2 / Fabric.
+
+This is a single-session, scene-specific result. The [full report](benchmarks/results/spawn-20261016/report.md)
+includes every phase, measured cache CPU costs, visual observations, environment
+details, [raw measurements](benchmarks/results/spawn-20261016/raw/) and limitations.
+It compares the DrawLess master switch OFF with its default optimization set ON.
+
 ## Install
 
 Install Fabric Loader 0.19.3+ and Fabric API 0.161.0+26.2, then put the DrawLess JAR in `mods`.
@@ -53,10 +69,17 @@ For A/B testing, keep the scene/camera/window/graphics identical and use OFF →
 The master switch disables DrawLess optimizations while preserving the diagnostic hooks.
 Compare particle/entity populations, control drift and stage time alongside FPS.
 
-## Build and test
+## Build and local validation
 
 ```sh
 ./gradlew build
+```
+
+The public checkout and GitHub Actions build the mod. Test sources and fixtures
+are maintained locally and are not published in this repository. In the development
+workspace containing those sources, additional native checks can be run with:
+
+```sh
 ./gradlew runClientGameTest
 ./gradlew runClientGameTest -PwithSodium -PwithImmediatelyFast
 ```
@@ -69,6 +92,10 @@ General text, nametag, feature batching, framebuffer and GUI atlas optimizations
 work. These optimizations are not included in the current release.
 Measure standalone and with Sodium/IF before promoting experimental features.
 
-Public GitHub/Modrinth publication has not been performed. License: MIT.
+## Benchmark evidence
 
-Rendering lifetimes and module boundaries are described in [ARCHITECTURE.md](ARCHITECTURE.md).
+See [benchmark methodology and selected results](benchmarks/README.md). Public
+performance claims must identify the measured JAR and environment. Native correctness
+tests are not server FPS benchmarks.
+
+Source: [WilyFoxM/DrawLess](https://github.com/WilyFoxM/DrawLess). License: MIT.

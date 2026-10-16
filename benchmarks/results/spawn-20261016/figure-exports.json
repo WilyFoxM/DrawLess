@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "status": "reviewed_figure_exports",
+  "figures": {
+    "phase-fps": {
+      "png_sha256": "5f0a0ed09d75e6161bef7c809e5556e90c3f2ff384f73a02fba474c42a56f30c",
+      "svg_sha256": "3dc8f7d0e44230e210ac9278b59f68237854d5cc33d1221d8199e456187b888d"
+    },
+    "cache-cpu": {
+      "png_sha256": "4c0c3713493c6416bd34f9ac213a9d5779bb671780f6d302b0b3e0aa124acda4",
+      "svg_sha256": "3ff5dd9dcb0234c648e7ade47876f43beb9b4d21d2d3ee6410deff4ad58ef403"
+    }
+  },
+  "generator_sha256": "d62898e1e77c4014708196894e76d4946c2a8e6e3fc020063a4aa729ff98b285",
+  "palette_sha256": "cc6bccc6dee5e20ca84be75f4b33e9f18bae5b105c717ab709ef4d926054cb21",
+  "inputs": [
+    {
+      "file": "drawless-20261016-235418-647-spawn_off1.md",
+      "sha256": "7fc51a27493a133999a10a159c7d2a6e04bcfa272746ca2d811d7612e9f90001"
+    },
+    {
+      "file": "drawless-20261016-235458-741-spawn_on1.md",
+      "sha256": "f7e392f98d91cd959f0c1dedafe73a19ea9e56bf7a84c5a36415046b5dbed7ea"
+    },
+    {
+      "file": "drawless-20261016-235533-511-spawn_off2.md",
+      "sha256": "8f82da9e96b2bada78a3a4f64ca61ff7bd65c28f0983d9eb85bb07516d8a0a6e"
+    },
+    {
+      "file": "drawless-20261016-235609-317-spawn_on2.md",
+      "sha256": "58ad8326e3bf530b827149532cc35fe306816cd674f3f875d44f931ea31a5df0"
+    },
+    {
+      "file": "drawless-20261016-235743-952-spawn_off3.md",
+      "sha256": "a5e77f23a102ceb9a5cf2be302d63b2a2a41a7f41986565ae943688622bbee61"
+    },
+    {
+      "file": "drawless-20261016-235820-613-spawn_on3.md",
+      "sha256": "b2ba73790f4ed83e1515ea5aa0fc477eaf8f3d5188a3c04cc3737e8a833e58d5"
+    },
+    {
+      "file": "drawless-20261016-235902-841-spawn_off4.md",
+      "sha256": "3c506e1b5025597304cc5de708cd0eefaec1449d4547a0ec104862a6d8b03a88"
+    }
+  ],
+  "scope": "Selected figure presentation reviewed; does not certify all measurements or publish files"
+}

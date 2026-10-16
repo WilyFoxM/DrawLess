@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <title>DrawLess / Benchmark 01</title>
+  <desc>Animated Item Display scene. +21.24% mean paired FPS improvement.
+  Mean bracketed OFF baseline 242.91 FPS; DrawLess ON 294.50 FPS.
+  Three bracketed ON comparisons in one recorded session, seven 20-second phases.
+  DrawLess 0.1.0 with Sodium, without ImmediatelyFast. Full conditions in the benchmark report.</desc>
+  <rect width="1200" height="800" fill="#0a182a"/>
+  <rect x="20.5" y="20.5" width="1159" height="759" rx="28" fill="none" stroke="#7dcfb6" stroke-opacity="0.18"/>
+  <g font-family="Arial, sans-serif">
+<text x="76" y="91" font-size="28" fill="#edf3fa" font-weight="700" text-anchor="start" >DrawLess</text>
+<text x="1124" y="89" font-size="16" fill="#a8bacd" font-weight="400" text-anchor="end" letter-spacing="2">BENCHMARK 01</text>
+<text x="76" y="128" font-size="20" fill="#a8bacd" font-weight="400" text-anchor="start" >Animated Item Display scene</text>
+<text x="70" y="324" font-size="136" fill="#fda24c" font-weight="700" text-anchor="start" letter-spacing="-5">+21.24%</text>
+<text x="76" y="371" font-size="25" fill="#edf3fa" font-weight="400" text-anchor="start" >mean paired FPS improvement</text>
+<text x="76" y="462" font-size="24" fill="#7dcfb6" font-weight="400" text-anchor="start" >DrawLess OFF</text>
+<text x="1124" y="462" font-size="28" fill="#edf3fa" font-weight="700" text-anchor="end" >242.91 FPS</text>
+<rect x="76" y="482" width="1048" height="16" rx="8" fill="#7dcfb6" fill-opacity="0.08"/>
+<rect x="76" y="482" width="864.4250" height="16" rx="8" fill="#7dcfb6"/>
+<text x="76" y="564" font-size="24" fill="#fda24c" font-weight="400" text-anchor="start" >DrawLess ON</text>
+<text x="1124" y="564" font-size="28" fill="#edf3fa" font-weight="700" text-anchor="end" >294.50 FPS</text>
+<rect x="76" y="584" width="1048" height="16" rx="8" fill="#7dcfb6" fill-opacity="0.08"/>
+<rect x="76" y="584" width="1048.0000" height="16" rx="8" fill="#fda24c"/>
+<text x="76" y="638" font-size="17" fill="#a8bacd" font-weight="400" text-anchor="start" >Mean FPS · OFF uses neighboring controls · Bars start at zero</text>
+<path d="M76 672 H1124" stroke="#7dcfb6" stroke-opacity="0.2"/>
+<text x="76" y="715" font-size="18" fill="#a8bacd" font-weight="400" text-anchor="start" >0.1.0 + Sodium · No ImmediatelyFast</text>
+<text x="1124" y="715" font-size="18" fill="#a8bacd" font-weight="400" text-anchor="end" >3 bracketed ON comparisons</text>
+<text x="76" y="750" font-size="17" fill="#a8bacd" font-weight="400" text-anchor="start" >Single recorded scene · Full conditions and limitations: Benchmark 01 report</text>
+</g></svg>

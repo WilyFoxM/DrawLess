@@ -1,0 +1,20 @@
+{
+  "schema_version": 2,
+  "layout_version": "metrics-v2",
+  "canvas": [
+    1200,
+    800
+  ],
+  "mean_bracketed_off_fps": 242.91333333333336,
+  "mean_on_fps": 294.5,
+  "mean_paired_change_percent": 21.23782790210799,
+  "comparison_count": 3,
+  "phase_count": 7,
+  "bar_scale": "linear, shared zero origin",
+  "summary_sha256": "0e75a4fc0ee07276ec8a99901844101a4062add5e08b28893d839217ee78fdbf",
+  "palette_sha256": "cc6bccc6dee5e20ca84be75f4b33e9f18bae5b105c717ab709ef4d926054cb21",
+  "generator_sha256": "895db0b84e5b5ab3ac23b231b71726afbf1dac4017035552444799c55fa0ac0a",
+  "renderer_sha256": "8393415ec608bdd7d3391926a43417a4a940ad7af72e3a08031563a5e14692e2",
+  "svg_sha256": "73b712e6584b1976a06d7dab13730fa0d6b9cc8875a0b7f4903e1ff4e81fa06a",
+  "png_sha256": "4cee69f284104c493b5da74c1f839b492aa521a984454c6b33d7e34be531e2d7"
+}
