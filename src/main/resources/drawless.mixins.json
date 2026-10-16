@@ -2,7 +2,10 @@
   "required": true,
   "package": "ru.wilyfox.drawless.mixin",
   "compatibilityLevel": "JAVA_25",
+  "plugin": "ru.wilyfox.drawless.mixin.DrawLessMixinPlugin",
   "client": [
+    "TextBufferReuseMixin",
+    "StagedBufferReuseAccessor",
     "DisplayProbeMixin",
     "DisplayCostTickMixin",
     "DisplayCostSubmitMixin",

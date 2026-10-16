@@ -14,7 +14,6 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.builders.UVPair;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -39,6 +38,7 @@ import org.joml.Vector3f;
 import org.lwjgl.opengl.GL31;
 import org.lwjgl.system.MemoryUtil;
 import ru.wilyfox.drawless.DrawLess;
+import ru.wilyfox.drawless.compat.RenderModSupport;
 import ru.wilyfox.drawless.config.DrawLessConfig;
 import ru.wilyfox.drawless.config.ExtremeDisplayMode;
 import ru.wilyfox.drawless.diagnostics.DisplayCostProbe;
@@ -59,7 +59,7 @@ public final class LiveDisplayGeometry {
     private static final long MAX_INDEX_BYTES=16L*1024*1024;
     private static final Identifier ITEM_SHADER=Identifier.withDefaultNamespace("core/item");
     private static final Identifier VERTEX_SHADER=Identifier.fromNamespaceAndPath("drawless","core/live_item");
-    private static final boolean SODIUM=FabricLoader.getInstance().isModLoaded("sodium");
+    private static final boolean SODIUM=RenderModSupport.SODIUM;
     private static final BindGroupLayout MESH_LAYOUT=BindGroupLayout.builder()
             .withUniform("FHGeometry",UniformType.TEXEL_BUFFER,GpuFormat.RGBA32_FLOAT)
             .withUniform("FHInstances",UniformType.TEXEL_BUFFER,GpuFormat.RGBA32_UINT).build();
@@ -149,7 +149,7 @@ public final class LiveDisplayGeometry {
     }
     private static String compatibility(Minecraft client){
         if(!RenderSystem.getDevice().getDeviceInfo().backendName().equals("OpenGL"))return "unsupported-backend";
-        if(FabricLoader.getInstance().isModLoaded("iris"))return "iris-vanilla-fallback";
+        if(RenderModSupport.IRIS)return "iris-vanilla-fallback";
         for(String file:List.of("shaders/core/item.vsh","shaders/core/item.fsh")){
             var resource=client.getResourceManager().getResource(Identifier.withDefaultNamespace(file));
             if(resource.isEmpty()||!resource.get().source().equals(client.getVanillaPackResources()))return "custom-item-shader";

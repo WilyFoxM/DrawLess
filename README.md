@@ -1,7 +1,8 @@
 # DrawLess
 
 Client-side rendering optimizations for Minecraft **26.2**, Fabric, Java **25**.
-Base package: `ru.wilyfox.drawless`. Initial development release: **0.1.0**.
+Base package: `ru.wilyfox.drawless`. Current development version: **0.2.0-dev**;
+published benchmark results below refer to **0.1.0**.
 
 DrawLess focuses on Item Display scenes, including animated ModelEngine NPCs. It reuses
 local model geometry while streaming the current transforms, light and tint, then batches
@@ -42,6 +43,16 @@ Use **`/drawless settings`** to open its settings screen.
 - Optional particle light and all-air collision caches, both OFF by default.
 - Optional Sodium integration for active brushable block entities and animated sprites.
 - Short explicit rendering probes, particle workload counters and opt-in CPU scopes.
+- Experimental pass-local vertex-buffer lookup reuse for text and name tags, OFF by default.
+  ImmediatelyFast owns this optimization when installed; the overlapping DrawLess hooks
+  are not applied. This does not disable DrawLess's Item Display optimizations.
+
+Text buffer reuse retains only the most recent consolidatable buffer within a text
+preparation group and verifies that it is still active. Pass completion, exceptions
+and nested preparation discard the cached reference. It does not cache glyphs, text
+content or rendered images. Enable it in settings for evaluation; no FPS improvement
+is claimed yet. With `/drawless profile start`, counters report requests, reused
+results and remaining lookups; the preparation scope includes vanilla work.
 
 Default settings enable the model cache and Live geometry cache. Physics/visibility quantity
 reductions are not part of that default. Unsupported materials, foil/glow and unsupported
@@ -88,8 +99,8 @@ Release JARs do not contain test code or optional runtime mods. Build output: `b
 
 ## Roadmap
 
-General text, nametag, feature batching, framebuffer and GUI atlas optimizations are future
-work. These optimizations are not included in the current release.
+Further text, feature batching, framebuffer and GUI atlas optimizations are future work.
+The experimental text/name-tag lookup reuse above is the first implemented step.
 Measure standalone and with Sodium/IF before promoting experimental features.
 
 ## Benchmark evidence
@@ -99,3 +110,13 @@ performance claims must identify the measured JAR and environment. Native correc
 tests are not server FPS benchmarks.
 
 Source: [WilyFoxM/DrawLess](https://github.com/WilyFoxM/DrawLess). License: MIT.
+
+## Attributions
+
+- **RK_01 / RaphiMC and ImmediatelyFast contributors** —
+  [ImmediatelyFast](https://github.com/RaphiMC/ImmediatelyFast), specifically the
+  [text and name-tag fast lookup approach in v1.16.5 for Minecraft 26.2](https://github.com/RaphiMC/ImmediatelyFast/tree/85b5f04bcb099f40fa9bb19bcd4c8cd1ec561ecc/common/src/main/java/net/raphimc/immediatelyfast/injection/mixins/fast_text_lookup).
+  This informed DrawLess's own pass-scoped buffer reuse implementation, including
+  active-buffer validation and shared handling for text and name tags. The IF
+  glyph-renderer mixin classes are not incorporated. ImmediatelyFast's source
+  remains under its [LGPL-3.0-or-later terms](https://github.com/RaphiMC/ImmediatelyFast/blob/85b5f04bcb099f40fa9bb19bcd4c8cd1ec561ecc/LICENSE).

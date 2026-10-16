@@ -12,36 +12,41 @@ import ru.wilyfox.drawless.config.ExtremeDisplayMode;
 public final class DrawLessScreen extends Screen {
     private final Screen parent;
     private int page;
-    private static final int ROWS=7;
+    private static final int ROWS=8;
     public DrawLessScreen(Screen parent) { super(Component.literal("DrawLess")); this.parent=parent; }
     @Override protected void init() {
-        int w=Math.min(360,width-24),x=(width-w)/2,y=Math.max(42,(height-230)/2);
+        int w=Math.min(360,width-24),x=(width-w)/2;
+        int step=Math.min(24,Math.max(20,(height-74)/ROWS));
+        int y=Math.max(42,(height-ROWS*step-24)/2);
         var c=DrawLessConfig.get();
         if(page==0) {
             toggle(x,y,w,"DrawLess",()->c.enabled,v->c.enabled=v);
-            cycle(x,y+24,w,"Display mode",()->{
+            cycle(x,y+step,w,"Display mode",()->{
                 var values=java.util.List.of(ExtremeDisplayMode.OFF,ExtremeDisplayMode.STATIC_CACHE,ExtremeDisplayMode.LIVE_CACHE,ExtremeDisplayMode.LIVE_EXTRACT);
                 c.extremeDisplayMode=values.get((values.indexOf(c.extremeDisplayMode)+1)%values.size());
             },()->c.extremeDisplayMode.label());
-            toggle(x,y+48,w,"Display model cache",()->c.displayModelBudget,v->c.displayModelBudget=v);
-            toggle(x,y+72,w,"Adaptive model budget",()->c.adaptiveDisplayModelBudget,v->c.adaptiveDisplayModelBudget=v);
-            cycle(x,y+96,w,"Model budget",()->c.displayModelBudgetMicros=c.displayModelBudgetMicros>=5000?100:c.displayModelBudgetMicros+100,()->c.displayModelBudgetMicros+" us");
-            toggle(x,y+120,w,"Particle light cache (experimental)",()->c.particleLightCache,v->c.particleLightCache=v);
-            toggle(x,y+144,w,"Particle empty collision (experimental)",()->c.particleEmptyCollision,v->c.particleEmptyCollision=v);
+            toggle(x,y+2*step,w,"Display model cache",()->c.displayModelBudget,v->c.displayModelBudget=v);
+            toggle(x,y+3*step,w,"Adaptive model budget",()->c.adaptiveDisplayModelBudget,v->c.adaptiveDisplayModelBudget=v);
+            cycle(x,y+4*step,w,"Model budget",()->c.displayModelBudgetMicros=c.displayModelBudgetMicros>=5000?100:c.displayModelBudgetMicros+100,()->c.displayModelBudgetMicros+" us");
+            toggle(x,y+5*step,w,"Particle light cache (experimental)",()->c.particleLightCache,v->c.particleLightCache=v);
+            toggle(x,y+6*step,w,"Particle empty collision (experimental)",()->c.particleEmptyCollision,v->c.particleEmptyCollision=v);
+            cycle(x,y+7*step,w,"Text buffer reuse (experimental)",()->{
+                if(!ru.wilyfox.drawless.compat.RenderModSupport.IMMEDIATELY_FAST)c.textBufferReuse=!c.textBufferReuse;
+            },()->ru.wilyfox.drawless.compat.RenderModSupport.IMMEDIATELY_FAST?"IF present":c.textBufferReuse?"ON":"OFF");
         } else {
             cycle(x,y,w,"Diagnostic mode",()->{
                 var values=java.util.List.of(ExtremeDisplayMode.FREEZE,ExtremeDisplayMode.UNRENDER,ExtremeDisplayMode.TICKS_ONLY,ExtremeDisplayMode.LIVE_CACHE);
                 c.extremeDisplayMode=values.get((values.indexOf(c.extremeDisplayMode)+1)%values.size());
             },()->c.extremeDisplayMode==ExtremeDisplayMode.FREEZE||c.extremeDisplayMode==ExtremeDisplayMode.UNRENDER||c.extremeDisplayMode==ExtremeDisplayMode.TICKS_ONLY?c.extremeDisplayMode.label():"OFF");
-            toggle(x,y+24,w,"Entire Item Display scene",()->c.extremeAllItemDisplays,v->c.extremeAllItemDisplays=v);
-            toggle(x,y+48,w,"Pause Display ticks (Freeze / Unrender)",()->c.extremePauseDisplayTicks,v->c.extremePauseDisplayTicks=v);
-            toggle(x,y+72,w,"NPC pose budget (experimental)",()->c.modelEngineNpcBudget,v->c.modelEngineNpcBudget=v);
-            cycle(x,y+96,w,"NPC groups per frame",()->c.npcGroupsPerFrame=c.npcGroupsPerFrame>=100?1:c.npcGroupsPerFrame+1,()->String.valueOf(c.npcGroupsPerFrame));
-            toggle(x,y+120,w,"Adaptive NPC budget",()->c.adaptiveNpcBudget,v->c.adaptiveNpcBudget=v);
-            button(x,y+144,w,"Reset settings",()->{DrawLessConfig.defaults();rebuildWidgets();});
+            toggle(x,y+step,w,"Entire Item Display scene",()->c.extremeAllItemDisplays,v->c.extremeAllItemDisplays=v);
+            toggle(x,y+2*step,w,"Pause Display ticks (Freeze / Unrender)",()->c.extremePauseDisplayTicks,v->c.extremePauseDisplayTicks=v);
+            toggle(x,y+3*step,w,"NPC pose budget (experimental)",()->c.modelEngineNpcBudget,v->c.modelEngineNpcBudget=v);
+            cycle(x,y+4*step,w,"NPC groups per frame",()->c.npcGroupsPerFrame=c.npcGroupsPerFrame>=100?1:c.npcGroupsPerFrame+1,()->String.valueOf(c.npcGroupsPerFrame));
+            toggle(x,y+5*step,w,"Adaptive NPC budget",()->c.adaptiveNpcBudget,v->c.adaptiveNpcBudget=v);
+            button(x,y+6*step,w,"Reset settings",()->{DrawLessConfig.defaults();rebuildWidgets();});
         }
-        button(x,y+ROWS*24+4,w/2-3,page==0?"Advanced →":"← General",()->{page=1-page;rebuildWidgets();});
-        button(x+w/2+3,y+ROWS*24+4,w/2-3,"Done",this::onClose);
+        button(x,y+ROWS*step+4,w/2-3,page==0?"Advanced →":"← General",()->{page=1-page;rebuildWidgets();});
+        button(x+w/2+3,y+ROWS*step+4,w/2-3,"Done",this::onClose);
     }
     private void toggle(int x,int y,int w,String label,BooleanSupplier get,Consumer<Boolean> set) {
         cycle(x,y,w,label,()->set.accept(!get.getAsBoolean()),()->get.getAsBoolean()?"ON":"OFF");
