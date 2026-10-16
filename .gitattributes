@@ -1,0 +1,2 @@
+# Recorded benchmark inputs and selected images must retain exact bytes.
+benchmarks/results/** -text whitespace=cr-at-eol

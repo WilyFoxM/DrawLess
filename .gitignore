@@ -5,12 +5,13 @@ run/
 out/
 bin/
 
-# Local editor and agent state
+# Local development settings
 .idea/
 .vscode/
-.codex/
-.codex_tmp/
 *.iml
+__pycache__/
+node_modules/
+*.py[cod]
 
 # Tests, fixtures and local validation
 /src/test/
@@ -49,9 +50,25 @@ replay_pid*.log
 Thumbs.db
 Desktop.ini
 
-# Only the root README belongs in the repository
+# Markdown is local unless explicitly selected below
 *.[mM][dD]
 !/README.md
+
+# Explicitly selected public documentation; local working notes remain ignored.
+!/.github/PULL_REQUEST_TEMPLATE.md
+!/benchmarks/README.md
+!/benchmarks/METHODOLOGY.md
+!/benchmarks/VALIDATION_0.1.0.md
+
+# Reporting tools and intermediate materials remain local.
+/tools/
+/benchmarks/results/**
+!/benchmarks/results/spawn-20261016/
+!/benchmarks/results/spawn-20261016/raw/
+!/benchmarks/results/spawn-20261016/raw/*.md
+!/benchmarks/results/spawn-20261016/modrinth-card.png
+!/benchmarks/results/spawn-20261016/phase-fps.png
+!/benchmarks/results/spawn-20261016/cache-cpu.png
 
 # Keep the Gradle wrapper required for builds
 !gradle/wrapper/gradle-wrapper.jar
