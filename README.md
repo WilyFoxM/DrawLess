@@ -1,7 +1,7 @@
 # DrawLess
 
 Client-side rendering optimizations for Minecraft **26.2**, Fabric, Java **25**.
-Base package: `ru.wilyfox.drawless`. Current development version: **0.2.0-dev**;
+Base package: `ru.wilyfox.drawless`. Current development version: **0.2.0-dev.2**;
 published benchmark results below refer to **0.1.0**.
 
 DrawLess focuses on Item Display scenes, including animated ModelEngine NPCs. It reuses
@@ -52,7 +52,8 @@ preparation group and verifies that it is still active. Pass completion, excepti
 and nested preparation discard the cached reference. It does not cache glyphs, text
 content or rendered images. Enable it in settings for evaluation; no FPS improvement
 is claimed yet. With `/drawless profile start`, counters report requests, reused
-results and remaining lookups; the preparation scope includes vanilla work.
+results and remaining lookups for both OFF and ON; the preparation scope includes
+vanilla work. Capture detailed CPU profiles separately from throughput runs.
 
 Default settings enable the model cache and Live geometry cache. Physics/visibility quantity
 reductions are not part of that default. Unsupported materials, foil/glow and unsupported
