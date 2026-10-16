@@ -59,11 +59,16 @@ Desktop.ini
 !/benchmarks/README.md
 !/benchmarks/METHODOLOGY.md
 !/benchmarks/VALIDATION_0.1.0.md
-!/benchmarks/results/spawn-20261016/report.md
-!/benchmarks/results/spawn-20261016/modrinth-description.template.md
-!/benchmarks/results/spawn-20261016/appendix.md
+
+# Reporting tools and intermediate materials remain local.
+/tools/
+/benchmarks/results/**
+!/benchmarks/results/spawn-20261016/
+!/benchmarks/results/spawn-20261016/raw/
 !/benchmarks/results/spawn-20261016/raw/*.md
-!/tools/benchmarks/README.md
+!/benchmarks/results/spawn-20261016/modrinth-card.png
+!/benchmarks/results/spawn-20261016/phase-fps.png
+!/benchmarks/results/spawn-20261016/cache-cpu.png
 
 # Keep the Gradle wrapper required for builds
 !gradle/wrapper/gradle-wrapper.jar

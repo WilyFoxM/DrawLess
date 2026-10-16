@@ -7,18 +7,18 @@ DrawLess focuses on Item Display scenes, including animated ModelEngine NPCs. It
 local model geometry while streaming the current transforms, light and tint, then batches
 supported parts by material. Entity movement and animation ticks remain live in the default mode.
 
-[Modrinth](https://modrinth.com/mod/drawless) · [Benchmark report](benchmarks/results/spawn-20261016/report.md) · [Methodology](benchmarks/METHODOLOGY.md)
+[Modrinth](https://modrinth.com/mod/drawless) · [Benchmark report](benchmarks/README.md) · [Methodology](benchmarks/METHODOLOGY.md)
 
 ## Measured performance
 
-[![DrawLess 0.1.0: +21.24% mean paired FPS improvement in the measured Item Display scene](benchmarks/results/spawn-20261016/modrinth-card.png)](benchmarks/results/spawn-20261016/report.md)
+[![DrawLess 0.1.0: +21.24% mean paired FPS improvement in the measured Item Display scene](benchmarks/results/spawn-20261016/modrinth-card.png)](benchmarks/README.md)
 
 One recorded Item Display spawn scene: **242.91 FPS** mean bracketed OFF baseline,
 **294.50 FPS** mean ON, **+21.24%** mean paired change across three ON comparisons.
 All seven 20-second phases are retained. Tested with Sodium, without ImmediatelyFast,
 on a Ryzen 5 5600H / RTX 3060 Laptop GPU, Minecraft 26.2 / Fabric.
 
-This is a single-session, scene-specific result. The [full report](benchmarks/results/spawn-20261016/report.md)
+This is a single-session, scene-specific result. The [full report](benchmarks/README.md)
 includes every phase, measured cache CPU costs, visual observations, environment
 details, [raw measurements](benchmarks/results/spawn-20261016/raw/) and limitations.
 It compares the DrawLess master switch OFF with its default optimization set ON.

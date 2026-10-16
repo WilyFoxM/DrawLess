@@ -1,6 +1,2 @@
-# Recorded inputs, export identities and hashed tooling must retain exact bytes.
+# Recorded benchmark inputs and selected images must retain exact bytes.
 benchmarks/results/** -text whitespace=cr-at-eol
-tools/benchmarks/** -text whitespace=cr-at-eol
-
-# Matplotlib SVG path data contains intentional trailing spaces.
-benchmarks/results/**/*.svg whitespace=cr-at-eol,-blank-at-eol

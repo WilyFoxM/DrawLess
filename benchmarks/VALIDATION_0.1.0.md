@@ -1,7 +1,7 @@
 # DrawLess 0.1.0: local correctness validation
 
 Prepared 2026-10-16 from archived local logs, JUnit XML and artifact records. The
-checks listed below were performed before this reporting-tool change; they were
+checks listed below were performed before this documentation update; they were
 not rerun merely to write this summary. These are correctness checks, not a server
 FPS benchmark or proof of universal compatibility.
 
@@ -54,6 +54,6 @@ reviewed files; they do not make private evidence publicly reproducible by thems
 | Live OFF screenshot | `1bc6ddb4096e8851f77ed6d407810f591c88f084e5726252c2c495a2e7cc8f0c` |
 | Live ON screenshot | `a7e505eaf4e0ed9cd11161ff966f764d53be09795fba7eaabb75c5245823e9c3` |
 
-The later [server-spawn benchmark](results/spawn-20261016/report.md) reports performance
+The later [server-spawn benchmark](README.md) reports performance
 separately, with Sodium and without ImmediatelyFast. Historical development FPS and
 synthetic tool-test plots are not substituted for those measurements.

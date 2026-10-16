@@ -42,9 +42,9 @@ buffers, not total process/GPU memory. Missing metrics remain unavailable.
 
 ## Comparability and overhead
 
-Report focus loss, menus, changed camera, populations and controls. The initial tool
-flags more than 5% OFF FPS spread (range divided by mean) and more than 2% loaded
-population spread for manual review. These are declared screening thresholds, not
+Report focus loss, menus, changed camera, populations and controls. More than 5%
+OFF FPS spread (range divided by mean) and more than 2% loaded population spread
+are flagged for manual review. These are declared screening thresholds, not
 significance tests, automatic exclusions or proof that unflagged runs are controlled.
 Rounded camera coordinates and constant sampled counts cannot prove a fixed scene.
 
@@ -63,13 +63,13 @@ animation, lighting, tint, visibility and supported/fallback materials. Live-ser
 screenshots are not synchronized pixel-parity tests. GPU buffer counters do not prove
 correct rendering, and a screenshot does not prove correct animation.
 
-Publish reviewed reports with raw measurements/hashes, configuration and limitations.
+Publish reviewed results with raw measurements/hashes, configuration and limitations.
 Preserve original inputs locally. Review inputs for private paths, chat and identifying
 data before publication. Any redaction must be declared; do not silently rewrite raw
 measurements. Generated drafts are not automatically suitable for a Modrinth claim.
 
-## Plot tooling
+## Figures
 
-Python/Matplotlib generate plots outside the game; no Python dependency is added to
-the mod. PNG is intended for page images and SVG for inspectable vector plots.
-[Matplotlib output backends](https://matplotlib.org/stable/users/explain/figure/backends.html).
+The published PNG figures show the headline comparison, every recorded phase and
+the measured live-cache CPU scopes. Their values come from the preserved raw
+measurements; generation is performed separately from the mod.
