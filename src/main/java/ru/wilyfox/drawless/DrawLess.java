@@ -47,6 +47,8 @@ public final class DrawLess implements ClientModInitializer {
     }
     public static String status() {
         return "DrawLess "+(DrawLessConfig.get().enabled?"enabled":"disabled")+"; Display "+ExtremeDisplayPerformance.diagnostic()
-                +"; layers "+DisplayModelBudget.diagnostic();
+                +"; layers "+DisplayModelBudget.diagnostic()+"; text buffer reuse "+
+                (ru.wilyfox.drawless.compat.RenderModSupport.IMMEDIATELY_FAST ? "disabled: ImmediatelyFast present"
+                 : DrawLessConfig.get().enabled && DrawLessConfig.get().textBufferReuse ? "on" : "off");
     }
 }

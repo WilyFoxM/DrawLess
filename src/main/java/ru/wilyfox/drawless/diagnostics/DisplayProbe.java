@@ -222,6 +222,9 @@ public final class DisplayProbe {
                     + "; dimension " + level.dimension().identifier() + "; render distance " + client.options.getEffectiveRenderDistance()
                     + "; GUI scale " + client.getWindow().getGuiScale() + "; detailed profiler " + RenderMetrics.getInstance().isEnabled()
                     + "; DrawLess enabled " + config.enabled
+                    + "; text buffer reuse " + config.textBufferReuse
+                    + "; text buffer reuse effective " + (config.enabled && config.textBufferReuse
+                        && !ru.wilyfox.drawless.compat.RenderModSupport.IMMEDIATELY_FAST)
                     + "; display model budget " + config.displayModelBudget + "; display budget us " + config.displayModelBudgetMicros
                     + "; adaptive display budget " + config.adaptiveDisplayModelBudget
                     + "; particle light cache " + config.particleLightCache
