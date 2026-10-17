@@ -15,6 +15,7 @@ public final class DrawLessConfig {
     public int schemaVersion = 1;
     public boolean enabled = true;
     public boolean textBufferReuse = false;
+    public boolean featureBatching = false;
     public boolean displayModelBudget = true;
     public int displayModelBudgetMicros = 500;
     public boolean adaptiveDisplayModelBudget = true;

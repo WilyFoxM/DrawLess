@@ -1,7 +1,7 @@
 # DrawLess
 
 Client-side rendering optimizations for Minecraft **26.2**, Fabric, Java **25**.
-Base package: `ru.wilyfox.drawless`. Current development version: **0.2.0-dev.2**;
+Base package: `ru.wilyfox.drawless`. Current development version: **0.2.0-dev.3**;
 published benchmark results below refer to **0.1.0**.
 
 DrawLess focuses on Item Display scenes, including animated ModelEngine NPCs. It reuses
@@ -46,6 +46,9 @@ Use **`/drawless settings`** to open its settings screen.
 - Experimental pass-local vertex-buffer lookup reuse for text and name tags, OFF by default.
   ImmediatelyFast owns this optimization when installed; the overlapping DrawLess hooks
   are not applied. This does not disable DrawLess's Item Display optimizations.
+- Experimental feature batching for groups Minecraft already permits to reorder, OFF by default.
+  Equivalent prepared materials can share a draw despite separate copies of the same
+  scissor rectangle. Ordered groups keep their original behavior. Disabled with IF or Iris.
 
 Text buffer reuse retains only the most recent consolidatable buffer within a text
 preparation group and verifies that it is still active. Pass completion, exceptions
@@ -54,6 +57,15 @@ content or rendered images. Enable it in settings for evaluation; no FPS improve
 is claimed yet. With `/drawless profile start`, counters report requests, reused
 results and remaining lookups for both OFF and ON; the preparation scope includes
 vanilla work. Capture detailed CPU profiles separately from throughput runs.
+
+Feature batching is available on the Advanced settings page. It compares pipeline,
+output target, GPU transform slice, texture/sampler bindings and scissor values using
+the group's existing material list. It retains no additional cache and does not change
+global scissor equality, group ordering permissions or cross-group boundaries.
+Detailed profiles record searches, reused draws, misses and actual draw submissions;
+search and submission scopes measure CPU work, not GPU elapsed time. The counters cover
+the `RenderTypeFeatureRenderer` path, not every draw call in the game. No scene-level
+FPS improvement is claimed for this experimental setting.
 
 Default settings enable the model cache and Live geometry cache. Physics/visibility quantity
 reductions are not part of that default. Unsupported materials, foil/glow and unsupported
@@ -100,8 +112,8 @@ Release JARs do not contain test code or optional runtime mods. Build output: `b
 
 ## Roadmap
 
-Further text, feature batching, framebuffer and GUI atlas optimizations are future work.
-The experimental text/name-tag lookup reuse above is the first implemented step.
+Further text, framebuffer and GUI atlas optimizations are future work.
+Text/name-tag lookup reuse and conservative feature batching are experimental steps.
 Measure standalone and with Sodium/IF before promoting experimental features.
 
 ## Benchmark evidence
@@ -121,3 +133,8 @@ Source: [WilyFoxM/DrawLess](https://github.com/WilyFoxM/DrawLess). License: MIT.
   active-buffer validation and shared handling for text and name tags. The IF
   glyph-renderer mixin classes are not incorporated. ImmediatelyFast's source
   remains under its [LGPL-3.0-or-later terms](https://github.com/RaphiMC/ImmediatelyFast/blob/85b5f04bcb099f40fa9bb19bcd4c8cd1ec561ecc/LICENSE).
+- **RK_01 / RaphiMC and ImmediatelyFast contributors** — the
+  [enhanced batching and scissor-state comparison approach](https://github.com/RaphiMC/ImmediatelyFast/tree/85b5f04bcb099f40fa9bb19bcd4c8cd1ec561ecc/common/src/main/java/net/raphimc/immediatelyfast/injection/mixins/enhanced_batching)
+  informed DrawLess's own prepared-material comparison inside vanilla-reorderable
+  groups. DrawLess uses the existing group list and preserves ordered-group barriers;
+  it does not incorporate IF's scissor mixin or force groups to become reorderable.

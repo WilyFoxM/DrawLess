@@ -22,6 +22,14 @@ public class DisplayCostItemGroupMixin {
     @Redirect(method="executeGroup",at=@At(value="INVOKE",target="Lnet/minecraft/client/renderer/rendertype/PreparedRenderType;drawFromBuffer(Lnet/minecraft/client/renderer/StagedVertexBuffer$ExecuteInfo;)V"))
     private void drawless$itemDraw(net.minecraft.client.renderer.rendertype.PreparedRenderType type,net.minecraft.client.renderer.StagedVertexBuffer.ExecuteInfo info){
         if((Object)this instanceof ItemFeatureRenderer)DisplayCostProbe.itemDraw();
-        type.drawFromBuffer(info);
+        var metrics=ru.wilyfox.drawless.diagnostics.RenderMetrics.getInstance();
+        if(metrics.isEnabled()&&ru.wilyfox.drawless.config.DrawLessConfig.get().enabled
+                &&!ru.wilyfox.drawless.compat.RenderModSupport.IMMEDIATELY_FAST
+                &&!ru.wilyfox.drawless.compat.RenderModSupport.IRIS){
+            try(var ignored=metrics.scope("render/featureBatching/submitDraw")){
+                type.drawFromBuffer(info);
+                metrics.incrementCounter("featureBatching/drawSubmissions",1);
+            }
+        }else type.drawFromBuffer(info);
     }
 }

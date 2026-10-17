@@ -43,7 +43,12 @@ public final class DrawLessScreen extends Screen {
             toggle(x,y+3*step,w,"NPC pose budget (experimental)",()->c.modelEngineNpcBudget,v->c.modelEngineNpcBudget=v);
             cycle(x,y+4*step,w,"NPC groups per frame",()->c.npcGroupsPerFrame=c.npcGroupsPerFrame>=100?1:c.npcGroupsPerFrame+1,()->String.valueOf(c.npcGroupsPerFrame));
             toggle(x,y+5*step,w,"Adaptive NPC budget",()->c.adaptiveNpcBudget,v->c.adaptiveNpcBudget=v);
-            button(x,y+6*step,w,"Reset settings",()->{DrawLessConfig.defaults();rebuildWidgets();});
+            cycle(x,y+6*step,w,"Feature batching (experimental)",()->{
+                if(!ru.wilyfox.drawless.compat.RenderModSupport.IMMEDIATELY_FAST
+                        && !ru.wilyfox.drawless.compat.RenderModSupport.IRIS)c.featureBatching=!c.featureBatching;
+            },()->ru.wilyfox.drawless.compat.RenderModSupport.IMMEDIATELY_FAST?"IF present"
+                    :ru.wilyfox.drawless.compat.RenderModSupport.IRIS?"Iris present":c.featureBatching?"ON":"OFF");
+            button(x,y+7*step,w,"Reset settings",()->{DrawLessConfig.defaults();rebuildWidgets();});
         }
         button(x,y+ROWS*step+4,w/2-3,page==0?"Advanced →":"← General",()->{page=1-page;rebuildWidgets();});
         button(x+w/2+3,y+ROWS*step+4,w/2-3,"Done",this::onClose);
