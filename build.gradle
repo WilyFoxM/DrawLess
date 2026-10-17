@@ -62,6 +62,7 @@ java {
 
 tasks.named('sourcesJar') {
 	includeEmptyDirs = false
+	from("LICENSE")
 }
 
 jar {
