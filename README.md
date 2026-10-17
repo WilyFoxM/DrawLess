@@ -1,7 +1,7 @@
 # DrawLess
 
 Client-side rendering optimizations for Minecraft **26.2**, Fabric, Java **25**.
-Base package: `ru.wilyfox.drawless`. Current development version: **0.2.0-dev.3**;
+Base package: `ru.wilyfox.drawless`. Current development version: **0.2.0-dev.4**;
 published benchmark results below refer to **0.1.0**.
 
 DrawLess focuses on Item Display scenes, including animated ModelEngine NPCs. It reuses
@@ -46,9 +46,9 @@ Use **`/drawless settings`** to open its settings screen.
 - Experimental pass-local vertex-buffer lookup reuse for text and name tags, OFF by default.
   ImmediatelyFast owns this optimization when installed; the overlapping DrawLess hooks
   are not applied. This does not disable DrawLess's Item Display optimizations.
-- Experimental feature batching for groups Minecraft already permits to reorder, OFF by default.
-  Equivalent prepared materials can share a draw despite separate copies of the same
-  scissor rectangle. Ordered groups keep their original behavior. Disabled with IF or Iris.
+- Experimental feature batching with OFF, LIMITED and EXPANDED modes, OFF by default.
+  LIMITED combines equivalent materials in vanilla-reorderable groups; EXPANDED also
+  permits reordering in originally ordered groups. Disabled with IF or Iris.
 
 Text buffer reuse retains only the most recent consolidatable buffer within a text
 preparation group and verifies that it is still active. Pass completion, exceptions
@@ -58,12 +58,24 @@ is claimed yet. With `/drawless profile start`, counters report requests, reused
 results and remaining lookups for both OFF and ON; the preparation scope includes
 vanilla work. Capture detailed CPU profiles separately from throughput runs.
 
-Feature batching is available on the Advanced settings page. It compares pipeline,
+Feature batching cycles OFF → LIMITED → EXPANDED on the Advanced settings page.
+It compares pipeline,
 output target, GPU transform slice, texture/sampler bindings and scissor values using
 the group's existing material list. It retains no additional cache and does not change
-global scissor equality, group ordering permissions or cross-group boundaries.
+global scissor equality or cross-group boundaries. EXPANDED lifts the group's ordering
+restriction while retaining material equality and geometry-consolidation requirements.
+LIMITED preserves the vanilla ordering restriction. Existing configurations with
+`featureBatching: true` remain LIMITED unless `featureBatchingReorder` is enabled.
+
+**EXPANDED can change overlapping layers.** Controlled GPU cases reproduce changes
+in alpha blending and opaque overdraw when an ordered A/B/A sequence becomes A/A/B.
+These are known fidelity limitations, not successful image-parity results. Use LIMITED
+when preserving the original group order is necessary; EXPANDED remains an opt-in
+development experiment for evaluating the additional batching opportunity.
+
 Detailed profiles record searches, reused draws, misses and actual draw submissions;
-search and submission scopes measure CPU work, not GPU elapsed time. The counters cover
+`promotedSearches` and `promotedReuses` identify work enabled by lifting the order restriction.
+Search and submission scopes measure CPU work, not GPU elapsed time. The counters cover
 the `RenderTypeFeatureRenderer` path, not every draw call in the game. No scene-level
 FPS improvement is claimed for this experimental setting.
 
@@ -113,7 +125,7 @@ Release JARs do not contain test code or optional runtime mods. Build output: `b
 ## Roadmap
 
 Further text, framebuffer and GUI atlas optimizations are future work.
-Text/name-tag lookup reuse and conservative feature batching are experimental steps.
+Text/name-tag lookup reuse and the two feature batching modes are experimental steps.
 Measure standalone and with Sodium/IF before promoting experimental features.
 
 ## Benchmark evidence
@@ -135,6 +147,7 @@ Source: [WilyFoxM/DrawLess](https://github.com/WilyFoxM/DrawLess). License: MIT.
   remains under its [LGPL-3.0-or-later terms](https://github.com/RaphiMC/ImmediatelyFast/blob/85b5f04bcb099f40fa9bb19bcd4c8cd1ec561ecc/LICENSE).
 - **RK_01 / RaphiMC and ImmediatelyFast contributors** — the
   [enhanced batching and scissor-state comparison approach](https://github.com/RaphiMC/ImmediatelyFast/tree/85b5f04bcb099f40fa9bb19bcd4c8cd1ec561ecc/common/src/main/java/net/raphimc/immediatelyfast/injection/mixins/enhanced_batching)
-  informed DrawLess's own prepared-material comparison inside vanilla-reorderable
-  groups. DrawLess uses the existing group list and preserves ordered-group barriers;
-  it does not incorporate IF's scissor mixin or force groups to become reorderable.
+  informed DrawLess's own prepared-material comparison and optional promotion of
+  ordered groups to reorderable batches. LIMITED retains vanilla order permissions;
+  EXPANDED evaluates the broader reordering approach using the existing group list.
+  IF's scissor and group mixin implementations are not incorporated.

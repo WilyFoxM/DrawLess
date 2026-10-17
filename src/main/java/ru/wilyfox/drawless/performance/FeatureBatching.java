@@ -8,7 +8,7 @@ import ru.wilyfox.drawless.config.DrawLessConfig;
 import java.util.List;
 import java.util.Objects;
 
-/** Value comparison inside a vanilla-reorderable group; owns no buffers or persistent state. */
+/** Shared material comparison and optional group reordering; owns no buffers or persistent state. */
 public final class FeatureBatching {
     private FeatureBatching() {}
 
@@ -16,6 +16,31 @@ public final class FeatureBatching {
         var config = DrawLessConfig.get();
         return config.enabled && config.featureBatching
                 && !RenderModSupport.IMMEDIATELY_FAST && !RenderModSupport.IRIS;
+    }
+
+    public static boolean reorders() {
+        return enabled() && DrawLessConfig.get().featureBatchingReorder;
+    }
+
+    public static String requestedMode() {
+        var config = DrawLessConfig.get();
+        return !config.featureBatching ? "OFF" : config.featureBatchingReorder ? "EXPANDED" : "LIMITED";
+    }
+
+    public static String effectiveMode() {
+        return enabled() ? requestedMode() : "OFF";
+    }
+
+    public static void cycleMode() {
+        var config = DrawLessConfig.get();
+        if (!config.featureBatching) {
+            config.featureBatching = true;
+            config.featureBatchingReorder = false;
+        } else if (!config.featureBatchingReorder) {
+            config.featureBatchingReorder = true;
+        } else {
+            config.featureBatching = config.featureBatchingReorder = false;
+        }
     }
 
     /** Preserve the first-match rule and every prepared material field. */

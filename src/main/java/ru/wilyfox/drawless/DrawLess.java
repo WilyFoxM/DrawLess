@@ -51,6 +51,6 @@ public final class DrawLess implements ClientModInitializer {
                 (ru.wilyfox.drawless.compat.RenderModSupport.IMMEDIATELY_FAST ? "disabled: ImmediatelyFast present"
                  : DrawLessConfig.get().enabled && DrawLessConfig.get().textBufferReuse ? "on" : "off")
                 +"; feature batching "+(ru.wilyfox.drawless.compat.RenderModSupport.IMMEDIATELY_FAST?"disabled: ImmediatelyFast present"
-                 :ru.wilyfox.drawless.compat.RenderModSupport.IRIS?"disabled: Iris present":FeatureBatching.enabled()?"on":"off");
+                 :ru.wilyfox.drawless.compat.RenderModSupport.IRIS?"disabled: Iris present":FeatureBatching.effectiveMode());
     }
 }
