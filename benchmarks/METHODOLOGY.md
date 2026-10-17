@@ -8,8 +8,10 @@ default ON measures the default DrawLess optimization set; it does not isolate L
 geometry. Master OFF retains diagnostic hooks. Testing without the mod is a separate
 installation-overhead control.
 
-Use the public JAR for public performance claims. Development instrumentation and
-synthetic correctness runs must be labelled separately.
+Release performance claims must use the public release JAR. A development-build
+measurement may be presented separately with its exact version, source revision,
+artifact SHA-256 and selected preset. It must not be relabelled as a result for
+the final release or its defaults. Synthetic correctness runs are separate evidence.
 
 ## Runs
 

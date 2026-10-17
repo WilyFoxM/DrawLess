@@ -12,23 +12,24 @@ supported parts by material. Entity movement and animation ticks remain live in 
 
 ## Measured performance
 
-[![DrawLess 0.1.0: +21.24% mean paired FPS improvement in the measured Item Display scene](benchmarks/results/spawn-20261016/modrinth-card.png)](benchmarks/README.md)
+[![Benchmark 02: +34.53% mean paired FPS change in one recorded development-build scene](benchmarks/results/spawn-20261017/modrinth-card.png)](benchmarks/README.md)
 
-One recorded Item Display spawn scene: **242.91 FPS** mean bracketed OFF baseline,
-**294.50 FPS** mean ON, **+21.24%** mean paired change across three ON comparisons.
-All seven 20-second phases are retained. Tested with Sodium, without ImmediatelyFast,
-on a Ryzen 5 5600H / RTX 3060 Laptop GPU, Minecraft 26.2 / Fabric.
+**Benchmark 02 — 0.2.0-dev.4 with Sodium, EXPANDED batching and text buffer reuse:**
+**241.88 FPS** mean bracketed OFF baseline, **325.39 FPS** mean ON, **+34.53%** mean
+paired change across three ON comparisons. Particle caches were OFF. All seven
+20-second phases are retained. Tested on a Ryzen 5 5600H / RTX 3060 Laptop GPU,
+Minecraft 26.2 / Fabric, without ImmediatelyFast.
 
-This is a single-session, scene-specific result. The [full report](benchmarks/README.md)
-includes every phase, measured cache CPU costs, visual observations, environment
-details, [raw measurements](benchmarks/results/spawn-20261016/raw/) and limitations.
-It compares the DrawLess 0.1.0 master switch OFF with that version's default optimization set ON.
+This is a single-session, scene-specific **development-build result for a selected
+preset**, not a measured upgrade percentage from 0.1.0 or a result for final 0.2.0
+defaults (text reuse defaults OFF). OFF controls varied by **12.03%**, and the Display
+population changed late in the series. The [full report](benchmarks/README.md)
+includes every phase, raw measurements, CPU scopes, environment and limitations.
 
-Version **0.2.0** adds broader feature batching to reduce separate draw submissions
-for compatible materials, including groups that previously prevented reordering.
-The benefit depends on the scene and rendering bottleneck. Development measurements
-showed gains in some scenes and little change in others; no verified overall FPS
-increase over 0.1.0 is claimed. The benchmark above remains a result for 0.1.0.
+The earlier **0.1.0 Benchmark 01** remains in the same report: **+21.24%** mean paired
+change, **242.91 FPS** bracketed baseline and **294.50 FPS** ON in its original scene.
+The two series have different scenes/settings and do not establish a version-to-version
+improvement. Performance depends on the scene and rendering bottleneck.
 
 ## Install
 
