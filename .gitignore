@@ -72,3 +72,12 @@ Desktop.ini
 
 # Keep the Gradle wrapper required for builds
 !gradle/wrapper/gradle-wrapper.jar
+
+
+# Selected Benchmark 02 figures and original measurements.
+!/benchmarks/results/spawn-20261017/
+!/benchmarks/results/spawn-20261017/raw/
+!/benchmarks/results/spawn-20261017/raw/*.md
+!/benchmarks/results/spawn-20261017/modrinth-card.png
+!/benchmarks/results/spawn-20261017/phase-fps.png
+!/benchmarks/results/spawn-20261017/cache-cpu.png
