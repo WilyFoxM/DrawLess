@@ -1,7 +1,7 @@
 # DrawLess
 
 Client-side rendering optimizations for Minecraft **26.2**, Fabric, Java **25**.
-Base package: `ru.wilyfox.drawless`. Current development version: **0.2.0-dev.2**;
+Base package: `ru.wilyfox.drawless`. Current development version: **0.2.0-dev.5**;
 published benchmark results below refer to **0.1.0**.
 
 DrawLess focuses on Item Display scenes, including animated ModelEngine NPCs. It reuses
@@ -22,7 +22,7 @@ on a Ryzen 5 5600H / RTX 3060 Laptop GPU, Minecraft 26.2 / Fabric.
 This is a single-session, scene-specific result. The [full report](benchmarks/README.md)
 includes every phase, measured cache CPU costs, visual observations, environment
 details, [raw measurements](benchmarks/results/spawn-20261016/raw/) and limitations.
-It compares the DrawLess master switch OFF with its default optimization set ON.
+It compares the DrawLess 0.1.0 master switch OFF with that version's default optimization set ON.
 
 ## Install
 
@@ -46,6 +46,9 @@ Use **`/drawless settings`** to open its settings screen.
 - Experimental pass-local vertex-buffer lookup reuse for text and name tags, OFF by default.
   ImmediatelyFast owns this optimization when installed; the overlapping DrawLess hooks
   are not applied. This does not disable DrawLess's Item Display optimizations.
+- Feature batching with OFF, LIMITED and EXPANDED modes, LIMITED by default.
+  LIMITED combines equivalent materials in vanilla-reorderable groups; EXPANDED also
+  permits reordering in originally ordered groups. Disabled with IF or Iris.
 
 Text buffer reuse retains only the most recent consolidatable buffer within a text
 preparation group and verifies that it is still active. Pass completion, exceptions
@@ -55,8 +58,32 @@ is claimed yet. With `/drawless profile start`, counters report requests, reused
 results and remaining lookups for both OFF and ON; the preparation scope includes
 vanilla work. Capture detailed CPU profiles separately from throughput runs.
 
-Default settings enable the model cache and Live geometry cache. Physics/visibility quantity
-reductions are not part of that default. Unsupported materials, foil/glow and unsupported
+Feature batching cycles OFF → LIMITED → EXPANDED on the Advanced settings page.
+It compares pipeline,
+output target, GPU transform slice, texture/sampler bindings and scissor values using
+the group's existing material list. It retains no additional cache and does not change
+global scissor equality or cross-group boundaries. EXPANDED lifts the group's ordering
+restriction while retaining material equality and geometry-consolidation requirements.
+LIMITED preserves the vanilla ordering restriction and is the default for new settings
+and configurations without a batching setting. Explicitly saved OFF or EXPANDED settings
+are preserved. Existing configurations with `featureBatching: true` remain LIMITED
+unless `featureBatchingReorder` is enabled.
+
+**EXPANDED can change overlapping layers.** Controlled GPU cases reproduce changes
+in alpha blending and opaque overdraw when an ordered A/B/A sequence becomes A/A/B.
+These are known fidelity limitations, not successful image-parity results. Use LIMITED
+when preserving the original group order is necessary; EXPANDED remains an opt-in
+development experiment for evaluating the additional batching opportunity.
+
+Detailed profiles record searches, reused draws, misses and actual draw submissions;
+`promotedSearches` and `promotedReuses` identify work enabled by lifting the order restriction.
+Search and submission scopes measure CPU work, not GPU elapsed time. The counters cover
+the `RenderTypeFeatureRenderer` path, not every draw call in the game. No scene-level
+FPS improvement is claimed for this experimental setting.
+
+Default settings enable the model cache, Live geometry cache and LIMITED feature batching.
+Physics/visibility quantity reductions are not part of that default. Unsupported materials,
+foil/glow and unsupported
 item shaders return to ordinary rendering. The custom GPU path currently requires OpenGL;
 Iris uses the vanilla fallback. This is a development release, not a guarantee of compatibility
 with every renderer or resource pack.
@@ -100,8 +127,8 @@ Release JARs do not contain test code or optional runtime mods. Build output: `b
 
 ## Roadmap
 
-Further text, feature batching, framebuffer and GUI atlas optimizations are future work.
-The experimental text/name-tag lookup reuse above is the first implemented step.
+Further text, framebuffer and GUI atlas optimizations are future work.
+Text/name-tag lookup reuse and EXPANDED feature batching remain experimental.
 Measure standalone and with Sodium/IF before promoting experimental features.
 
 ## Benchmark evidence
@@ -121,3 +148,9 @@ Source: [WilyFoxM/DrawLess](https://github.com/WilyFoxM/DrawLess). License: MIT.
   active-buffer validation and shared handling for text and name tags. The IF
   glyph-renderer mixin classes are not incorporated. ImmediatelyFast's source
   remains under its [LGPL-3.0-or-later terms](https://github.com/RaphiMC/ImmediatelyFast/blob/85b5f04bcb099f40fa9bb19bcd4c8cd1ec561ecc/LICENSE).
+- **RK_01 / RaphiMC and ImmediatelyFast contributors** — the
+  [enhanced batching and scissor-state comparison approach](https://github.com/RaphiMC/ImmediatelyFast/tree/85b5f04bcb099f40fa9bb19bcd4c8cd1ec561ecc/common/src/main/java/net/raphimc/immediatelyfast/injection/mixins/enhanced_batching)
+  informed DrawLess's own prepared-material comparison and optional promotion of
+  ordered groups to reorderable batches. LIMITED retains vanilla order permissions;
+  EXPANDED evaluates the broader reordering approach using the existing group list.
+  IF's scissor and group mixin implementations are not incorporated.

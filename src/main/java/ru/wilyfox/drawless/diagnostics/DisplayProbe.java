@@ -225,6 +225,10 @@ public final class DisplayProbe {
                     + "; text buffer reuse " + config.textBufferReuse
                     + "; text buffer reuse effective " + (config.enabled && config.textBufferReuse
                         && !ru.wilyfox.drawless.compat.RenderModSupport.IMMEDIATELY_FAST)
+                    + "; feature batching " + config.featureBatching
+                    + "; feature batching effective " + ru.wilyfox.drawless.performance.FeatureBatching.enabled()
+                    + "; feature batching mode " + ru.wilyfox.drawless.performance.FeatureBatching.requestedMode()
+                    + "; feature batching effective mode " + ru.wilyfox.drawless.performance.FeatureBatching.effectiveMode()
                     + "; display model budget " + config.displayModelBudget + "; display budget us " + config.displayModelBudgetMicros
                     + "; adaptive display budget " + config.adaptiveDisplayModelBudget
                     + "; particle light cache " + config.particleLightCache

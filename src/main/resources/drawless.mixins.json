@@ -4,6 +4,7 @@
   "compatibilityLevel": "JAVA_25",
   "plugin": "ru.wilyfox.drawless.mixin.DrawLessMixinPlugin",
   "client": [
+    "FeatureBatchingMixin",
     "TextBufferReuseMixin",
     "StagedBufferReuseAccessor",
     "DisplayProbeMixin",

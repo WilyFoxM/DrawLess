@@ -8,9 +8,12 @@ import ru.wilyfox.drawless.compat.RenderModSupport;
 import java.util.List;
 import java.util.Set;
 
-/** Avoid installing overlapping text hooks when ImmediatelyFast owns this path. */
+/** Resolve overlapping or unvalidated rendering integrations before installing hooks. */
 public final class DrawLessMixinPlugin implements IMixinConfigPlugin {
     @Override public boolean shouldApplyMixin(String target, String mixin) {
+        if (mixin.endsWith(".FeatureBatchingMixin")) {
+            return !RenderModSupport.IMMEDIATELY_FAST && !RenderModSupport.IRIS;
+        }
         if (mixin.endsWith(".TextBufferReuseMixin") || mixin.endsWith(".StagedBufferReuseAccessor")) {
             return !RenderModSupport.IMMEDIATELY_FAST;
         }

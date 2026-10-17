@@ -43,7 +43,16 @@ public final class DrawLessScreen extends Screen {
             toggle(x,y+3*step,w,"NPC pose budget (experimental)",()->c.modelEngineNpcBudget,v->c.modelEngineNpcBudget=v);
             cycle(x,y+4*step,w,"NPC groups per frame",()->c.npcGroupsPerFrame=c.npcGroupsPerFrame>=100?1:c.npcGroupsPerFrame+1,()->String.valueOf(c.npcGroupsPerFrame));
             toggle(x,y+5*step,w,"Adaptive NPC budget",()->c.adaptiveNpcBudget,v->c.adaptiveNpcBudget=v);
-            button(x,y+6*step,w,"Reset settings",()->{DrawLessConfig.defaults();rebuildWidgets();});
+            cycle(x,y+6*step,w,"Feature batching (experimental)",()->{
+                if(!ru.wilyfox.drawless.compat.RenderModSupport.IMMEDIATELY_FAST
+                        && !ru.wilyfox.drawless.compat.RenderModSupport.IRIS)
+                    ru.wilyfox.drawless.performance.FeatureBatching.cycleMode();
+            },()->ru.wilyfox.drawless.compat.RenderModSupport.IMMEDIATELY_FAST?"IF present"
+                    :ru.wilyfox.drawless.compat.RenderModSupport.IRIS?"Iris present"
+                    :ru.wilyfox.drawless.performance.FeatureBatching.requestedMode())
+                    .setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
+                            "Limited preserves ordered groups. Expanded also reorders them and may change overlapping layers.")));
+            button(x,y+7*step,w,"Reset settings",()->{DrawLessConfig.defaults();rebuildWidgets();});
         }
         button(x,y+ROWS*step+4,w/2-3,page==0?"Advanced →":"← General",()->{page=1-page;rebuildWidgets();});
         button(x+w/2+3,y+ROWS*step+4,w/2-3,"Done",this::onClose);
@@ -51,11 +60,11 @@ public final class DrawLessScreen extends Screen {
     private void toggle(int x,int y,int w,String label,BooleanSupplier get,Consumer<Boolean> set) {
         cycle(x,y,w,label,()->set.accept(!get.getAsBoolean()),()->get.getAsBoolean()?"ON":"OFF");
     }
-    private void cycle(int x,int y,int w,String label,Runnable next,java.util.function.Supplier<String> value) {
-        button(x,y,w,label+": "+value.get(),()->{next.run();rebuildWidgets();});
+    private Button cycle(int x,int y,int w,String label,Runnable next,java.util.function.Supplier<String> value) {
+        return button(x,y,w,label+": "+value.get(),()->{next.run();rebuildWidgets();});
     }
-    private void button(int x,int y,int w,String label,Runnable action) {
-        addRenderableWidget(new Button(x,y,w,20,Component.literal(label),ignored->action.run(),java.util.function.Supplier::get) {
+    private Button button(int x,int y,int w,String label,Runnable action) {
+        return addRenderableWidget(new Button(x,y,w,20,Component.literal(label),ignored->action.run(),java.util.function.Supplier::get) {
             @Override protected void extractContents(GuiGraphicsExtractor g,int mx,int my,float delta) {
                 boolean highlighted=isMouseOver(mx,my)||isFocused();
                 g.fill(getX(),getY(),getRight(),getBottom(),highlighted?0xFF3B4746:0xFF293235);
