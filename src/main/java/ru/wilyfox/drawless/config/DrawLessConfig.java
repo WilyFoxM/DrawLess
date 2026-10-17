@@ -2,6 +2,7 @@ package ru.wilyfox.drawless.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParser;
 import net.fabricmc.loader.api.FabricLoader;
 import ru.wilyfox.drawless.DrawLess;
 import ru.wilyfox.drawless.util.AtomicFileWriter;
@@ -16,7 +17,7 @@ public final class DrawLessConfig {
     public boolean enabled = true;
     public boolean textBufferReuse = false;
     public boolean featureBatching = true;
-    public boolean featureBatchingReorder = false;
+    public boolean featureBatchingReorder = true;
     public boolean displayModelBudget = true;
     public int displayModelBudgetMicros = 500;
     public boolean adaptiveDisplayModelBudget = true;
@@ -32,9 +33,14 @@ public final class DrawLessConfig {
     public static DrawLessConfig get() { return instance; }
     public static Path path() { return FabricLoader.getInstance().getConfigDir().resolve("drawless.json"); }
     public static DrawLessConfig decode(String text) {
-        var config = GSON.fromJson(text, DrawLessConfig.class);
+        var json = JsonParser.parseString(text);
+        var config = GSON.fromJson(json, DrawLessConfig.class);
         if (config == null) throw new IllegalArgumentException("Config must be an object");
         if (config.schemaVersion != 1) throw new IllegalArgumentException("Unsupported schema version " + config.schemaVersion);
+        // Boolean-only batching settings used true for LIMITED before the reorder flag existed.
+        if (json.getAsJsonObject().has("featureBatching") && !json.getAsJsonObject().has("featureBatchingReorder")) {
+            config.featureBatchingReorder = false;
+        }
         config.sanitize(); return config;
     }
     public void sanitize() {

@@ -1,7 +1,7 @@
 # DrawLess
 
 Client-side rendering optimizations for Minecraft **26.2**, Fabric, Java **25**.
-Base package: `ru.wilyfox.drawless`. Current development version: **0.2.0-dev.5**;
+Base package: `ru.wilyfox.drawless`. Current version: **0.2.0**;
 published benchmark results below refer to **0.1.0**.
 
 DrawLess focuses on Item Display scenes, including animated ModelEngine NPCs. It reuses
@@ -23,6 +23,12 @@ This is a single-session, scene-specific result. The [full report](benchmarks/RE
 includes every phase, measured cache CPU costs, visual observations, environment
 details, [raw measurements](benchmarks/results/spawn-20261016/raw/) and limitations.
 It compares the DrawLess 0.1.0 master switch OFF with that version's default optimization set ON.
+
+Version **0.2.0** adds broader feature batching to reduce separate draw submissions
+for compatible materials, including groups that previously prevented reordering.
+The benefit depends on the scene and rendering bottleneck. Development measurements
+showed gains in some scenes and little change in others; no verified overall FPS
+increase over 0.1.0 is claimed. The benchmark above remains a result for 0.1.0.
 
 ## Install
 
@@ -46,7 +52,7 @@ Use **`/drawless settings`** to open its settings screen.
 - Experimental pass-local vertex-buffer lookup reuse for text and name tags, OFF by default.
   ImmediatelyFast owns this optimization when installed; the overlapping DrawLess hooks
   are not applied. This does not disable DrawLess's Item Display optimizations.
-- Feature batching with OFF, LIMITED and EXPANDED modes, LIMITED by default.
+- Feature batching with OFF, LIMITED and EXPANDED modes, EXPANDED by default.
   LIMITED combines equivalent materials in vanilla-reorderable groups; EXPANDED also
   permits reordering in originally ordered groups. Disabled with IF or Iris.
 
@@ -64,16 +70,17 @@ output target, GPU transform slice, texture/sampler bindings and scissor values 
 the group's existing material list. It retains no additional cache and does not change
 global scissor equality or cross-group boundaries. EXPANDED lifts the group's ordering
 restriction while retaining material equality and geometry-consolidation requirements.
-LIMITED preserves the vanilla ordering restriction and is the default for new settings
-and configurations without a batching setting. Explicitly saved OFF or EXPANDED settings
-are preserved. Existing configurations with `featureBatching: true` remain LIMITED
-unless `featureBatchingReorder` is enabled.
+LIMITED preserves the vanilla ordering restriction. EXPANDED is the default for new
+settings and configurations without a batching setting. Explicitly saved OFF, LIMITED
+or EXPANDED settings are preserved. Older boolean-only configurations with
+`featureBatching: true` remain LIMITED when no `featureBatchingReorder` field is present.
 
 **EXPANDED can change overlapping layers.** Controlled GPU cases reproduce changes
 in alpha blending and opaque overdraw when an ordered A/B/A sequence becomes A/A/B.
-These are known fidelity limitations, not successful image-parity results. Use LIMITED
-when preserving the original group order is necessary; EXPANDED remains an opt-in
-development experiment for evaluating the additional batching opportunity.
+These are known fidelity limitations, not successful image-parity results. The operator
+reported no visible issues while playing with EXPANDED across three locations; this
+does not establish equivalence for every material or resource pack. Switch to LIMITED
+or OFF in Advanced settings if overlapping text, backgrounds or layers look incorrect.
 
 Detailed profiles record searches, reused draws, misses and actual draw submissions;
 `promotedSearches` and `promotedReuses` identify work enabled by lifting the order restriction.
@@ -81,7 +88,7 @@ Search and submission scopes measure CPU work, not GPU elapsed time. The counter
 the `RenderTypeFeatureRenderer` path, not every draw call in the game. No scene-level
 FPS improvement is claimed for this experimental setting.
 
-Default settings enable the model cache, Live geometry cache and LIMITED feature batching.
+Default settings enable the model cache, Live geometry cache and EXPANDED feature batching.
 Physics/visibility quantity reductions are not part of that default. Unsupported materials,
 foil/glow and unsupported
 item shaders return to ordinary rendering. The custom GPU path currently requires OpenGL;
@@ -128,8 +135,9 @@ Release JARs do not contain test code or optional runtime mods. Build output: `b
 ## Roadmap
 
 Further text, framebuffer and GUI atlas optimizations are future work.
-Text/name-tag lookup reuse and EXPANDED feature batching remain experimental.
-Measure standalone and with Sodium/IF before promoting experimental features.
+Text/name-tag lookup reuse remains optional and experimental. Continue evaluating
+feature batching across scenes and renderers, including frame-time stability and
+the known layer-ordering limitations.
 
 ## Benchmark evidence
 
