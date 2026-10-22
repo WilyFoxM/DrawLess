@@ -1,0 +1,29 @@
+// Keep mutation testing explicit and limited to logic that runs without Minecraft.
+pitest {
+    pitestVersion = '1.30.1'
+    junit5PluginVersion = '1.2.3'
+    targetClasses = [
+        'ru.wilyfox.drawless.performance.DisplayFrameBudget',
+        'ru.wilyfox.drawless.performance.LiveGeometryEncoding',
+        'ru.wilyfox.drawless.performance.PassLocalBufferReuse'
+    ]
+    targetTests = [
+        'ru.wilyfox.drawless.performance.DisplayFrameBudgetTest',
+        'ru.wilyfox.drawless.performance.LiveGeometryEncodingTest',
+        'ru.wilyfox.drawless.performance.PassLocalBufferReuseTest'
+    ]
+    mutators = ['DEFAULTS']
+    threads = 2
+    timeoutConstInMillis = 4000
+    timeoutFactor = 2.0
+    outputFormats = ['HTML', 'XML']
+    timestampedReports = false
+    failWhenNoMutations = true
+}
+
+tasks.named('pitest') {
+    group = 'verification'
+    description = 'Mutates selected pure logic; requires local unit test sources.'
+    dependsOn tasks.named('test')
+    onlyIf('local unit test sources are available') { !sourceSets.test.allJava.empty }
+}

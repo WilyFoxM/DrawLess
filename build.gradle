@@ -3,6 +3,7 @@ plugins {
     id 'maven-publish'
     id 'jacoco'
     id 'com.diffplug.spotless' version '8.10.4'
+    id 'info.solidsoft.pitest' version '1.19.0'
 }
 
 version = project.mod_version
@@ -88,3 +89,4 @@ fabricApi.configureTests {
 }
 
 apply from: 'gradle/quality.gradle'
+apply from: 'gradle/mutation.gradle'
