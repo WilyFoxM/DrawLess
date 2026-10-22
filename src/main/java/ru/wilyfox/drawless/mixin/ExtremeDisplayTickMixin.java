@@ -9,9 +9,16 @@ import ru.wilyfox.drawless.performance.ExtremeDisplayPerformance;
 
 @Mixin(Display.class)
 public class ExtremeDisplayTickMixin {
-    // After vanilla removes a dead vehicle, before the client-only rendering/interpolation branch.
-    @Inject(method="tick",at=@At(value="FIELD",target="Lnet/minecraft/world/entity/Display;updateStartTick:Z",opcode=180),cancellable=true)
-    private void drawless$pauseDisplayAnimation(CallbackInfo ci) {
-        if(ExtremeDisplayPerformance.skipTick((Display)(Object)this))ci.cancel();
-    }
+  // After vanilla removes a dead vehicle, before the client-only rendering/interpolation branch.
+  @Inject(
+      method = "tick",
+      at =
+          @At(
+              value = "FIELD",
+              target = "Lnet/minecraft/world/entity/Display;updateStartTick:Z",
+              opcode = 180),
+      cancellable = true)
+  private void drawless$pauseDisplayAnimation(CallbackInfo ci) {
+    if (ExtremeDisplayPerformance.skipTick((Display) (Object) this)) ci.cancel();
+  }
 }

@@ -1,2 +1,13 @@
 # Recorded benchmark inputs and selected images must retain exact bytes.
 benchmarks/results/** -text whitespace=cr-at-eol
+
+*.java text eol=lf
+*.gradle text eol=lf
+*.properties text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+.editorconfig text eol=lf
+.gitattributes text eol=lf
+gradlew text eol=lf
+*.bat text eol=crlf
+

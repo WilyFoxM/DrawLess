@@ -133,6 +133,44 @@ workspace containing those sources, additional native checks can be run with:
 
 Release JARs do not contain test code or optional runtime mods. Build output: `build/libs/`.
 
+Spotless checks Java formatting as part of `build`; apply the pinned Google Java
+style and remove unused imports with:
+
+```sh
+./gradlew spotlessApply
+./gradlew spotlessCheck
+```
+
+Java uses two-space indentation and LF line endings. Formatting covers local test
+sources when present; benchmark raw files are excluded and preserve their original bytes.
+
+JaCoCo produces local HTML and XML reports for unit tests:
+
+```sh
+./gradlew test jacocoTestReport
+```
+
+The HTML report is `build/reports/jacoco/test/html/index.html`. Native client
+coverage is explicitly enabled for correctness runs, separately from FPS benchmarks:
+
+```sh
+./gradlew jacocoClientReport jacocoCombinedReport -PnativeCoverage -PwithSodium
+```
+
+Native and combined reports are under `build/reports/jacoco/client-sodium/` and
+`build/reports/jacoco/combined-sodium/`. Without `-PwithSodium`, the variant is
+`standalone`; adding `-PwithImmediatelyFast` adds the `-if` suffix. Normal game
+runs are not instrumented by this setup.
+
+Reports retain all main classes, including uncovered code. Mixin methods execute
+inside Minecraft classes and are not measured by the native coverage collector;
+their original classes remain uncovered in the report. Coverage does not establish
+visual correctness or performance. No minimum percentage is enforced yet.
+
+Test sources and coverage results remain local. A fresh public checkout and GitHub
+CI check formatting and build the mod; coverage tasks without their local test
+sources are skipped rather than publishing a coverage percentage.
+
 ## Roadmap
 
 Further text, framebuffer and GUI atlas optimizations are future work.

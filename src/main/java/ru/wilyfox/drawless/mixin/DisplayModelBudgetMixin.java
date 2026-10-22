@@ -15,18 +15,39 @@ import ru.wilyfox.drawless.performance.DisplayModelBudget;
 
 @Mixin(DisplayRenderer.ItemDisplayRenderer.class)
 public class DisplayModelBudgetMixin {
-    @Redirect(method = "extractRenderState(Lnet/minecraft/world/entity/Display$ItemDisplay;Lnet/minecraft/client/renderer/entity/state/ItemDisplayEntityRenderState;F)V",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/item/ItemModelResolver;updateForNonLiving(Lnet/minecraft/client/renderer/item/ItemStackRenderState;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lnet/minecraft/world/entity/Entity;)V"))
-    private void drawless$cachedModel(ItemModelResolver resolver, ItemStackRenderState item, ItemStack stack,
-                                        ItemDisplayContext context, Entity source, Display.ItemDisplay entity,
-                                        ItemDisplayEntityRenderState state, float partialTick) {
-        if (!DisplayModelBudget.apply(resolver, stack, context, entity, state))
-            resolver.updateForNonLiving(DisplayModelBudget.writableLayers(state), stack, context, source);
-    }
-    @Redirect(method="extractRenderState(Lnet/minecraft/world/entity/Display$ItemDisplay;Lnet/minecraft/client/renderer/entity/state/ItemDisplayEntityRenderState;F)V",
-            at=@At(value="INVOKE",target="Lnet/minecraft/client/renderer/item/ItemStackRenderState;clear()V"))
-    private void drawless$clearOwnedLayers(ItemStackRenderState item,Display.ItemDisplay entity,
-                                            ItemDisplayEntityRenderState state,float partialTick) {
-        DisplayModelBudget.writableLayers(state).clear();
-    }
+  @Redirect(
+      method =
+          "extractRenderState(Lnet/minecraft/world/entity/Display$ItemDisplay;Lnet/minecraft/client/renderer/entity/state/ItemDisplayEntityRenderState;F)V",
+      at =
+          @At(
+              value = "INVOKE",
+              target =
+                  "Lnet/minecraft/client/renderer/item/ItemModelResolver;updateForNonLiving(Lnet/minecraft/client/renderer/item/ItemStackRenderState;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lnet/minecraft/world/entity/Entity;)V"))
+  private void drawless$cachedModel(
+      ItemModelResolver resolver,
+      ItemStackRenderState item,
+      ItemStack stack,
+      ItemDisplayContext context,
+      Entity source,
+      Display.ItemDisplay entity,
+      ItemDisplayEntityRenderState state,
+      float partialTick) {
+    if (!DisplayModelBudget.apply(resolver, stack, context, entity, state))
+      resolver.updateForNonLiving(DisplayModelBudget.writableLayers(state), stack, context, source);
+  }
+
+  @Redirect(
+      method =
+          "extractRenderState(Lnet/minecraft/world/entity/Display$ItemDisplay;Lnet/minecraft/client/renderer/entity/state/ItemDisplayEntityRenderState;F)V",
+      at =
+          @At(
+              value = "INVOKE",
+              target = "Lnet/minecraft/client/renderer/item/ItemStackRenderState;clear()V"))
+  private void drawless$clearOwnedLayers(
+      ItemStackRenderState item,
+      Display.ItemDisplay entity,
+      ItemDisplayEntityRenderState state,
+      float partialTick) {
+    DisplayModelBudget.writableLayers(state).clear();
+  }
 }

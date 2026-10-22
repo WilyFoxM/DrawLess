@@ -11,8 +11,15 @@ import ru.wilyfox.drawless.performance.ParticleCollisionCache;
 
 @Mixin(ClientChunkCache.class)
 public abstract class ParticleCollisionChunkMixin {
-    @Inject(method = {"drop", "updateViewCenter", "updateViewRadius"}, at = @At("HEAD"))
-    private void drawless$chunksChanged(CallbackInfo ci) { ParticleCollisionCache.invalidate(); }
-    @Inject(method = "replaceWithPacketData", at = @At("HEAD"))
-    private void drawless$chunkReplaced(CallbackInfoReturnable<LevelChunk> cir) { ParticleCollisionCache.invalidate(); }
+  @Inject(
+      method = {"drop", "updateViewCenter", "updateViewRadius"},
+      at = @At("HEAD"))
+  private void drawless$chunksChanged(CallbackInfo ci) {
+    ParticleCollisionCache.invalidate();
+  }
+
+  @Inject(method = "replaceWithPacketData", at = @At("HEAD"))
+  private void drawless$chunkReplaced(CallbackInfoReturnable<LevelChunk> cir) {
+    ParticleCollisionCache.invalidate();
+  }
 }

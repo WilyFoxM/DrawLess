@@ -8,5 +8,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(ItemDisplayEntityRenderState.class)
 public interface DisplayItemStateAccessor {
-    @Mutable @Accessor("item") void drawless$setItem(ItemStackRenderState state);
+  @Mutable
+  @Accessor("item")
+  void drawless$setItem(ItemStackRenderState state);
 }
