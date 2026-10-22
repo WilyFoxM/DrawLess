@@ -1,0 +1,102 @@
+import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
+import org.gradle.testing.jacoco.tasks.JacocoReport
+
+spotless {
+    java {
+        target 'src/**/*.java'
+        googleJavaFormat('1.31.0')
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+    format('gradle') {
+        target '*.gradle', 'gradle/*.gradle'
+        leadingTabsToSpaces(4)
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}
+
+jacoco {
+    toolVersion = '0.8.15'
+}
+
+tasks.withType(Test).configureEach {
+    jacoco {
+        includes = ['ru.wilyfox.drawless.*']
+    }
+}
+
+tasks.named('jacocoTestReport', JacocoReport) {
+    dependsOn tasks.named('test')
+    onlyIf('local unit test sources are available') { !sourceSets.test.allJava.empty }
+    reports {
+        html.required = true
+        xml.required = true
+        csv.required = false
+    }
+}
+
+tasks.named('test') {
+    finalizedBy tasks.named('jacocoTestReport')
+}
+
+// Instrument native checks only when explicitly requested, never ordinary game runs.
+def nativeCoverage = providers.gradleProperty('nativeCoverage').isPresent()
+        && !sourceSets.gametest.allJava.empty
+def nativeVariant = project.hasProperty('withSodium') ? 'sodium' : 'standalone'
+if (project.hasProperty('withImmediatelyFast')) {
+    nativeVariant += '-if'
+}
+def nativeExecutionData = layout.buildDirectory.file("jacoco/client-${nativeVariant}.exec")
+
+tasks.named('runClientGameTest') { task ->
+    if (nativeCoverage) {
+        project.jacoco.applyTo(task)
+        task.extensions.configure(JacocoTaskExtension) { coverage ->
+            coverage.destinationFile = nativeExecutionData.get().asFile
+            coverage.includes = ['ru.wilyfox.drawless.*']
+            // Mixin methods execute inside Minecraft classes, outside this report's scope.
+            coverage.excludes = ['ru.wilyfox.drawless.mixin.*']
+        }
+    }
+}
+
+tasks.register('jacocoClientReport', JacocoReport) {
+    group = 'verification'
+    description = 'Reports native client coverage; requires -PnativeCoverage and local fixtures.'
+    onlyIf('native coverage was requested and local fixtures are available') { nativeCoverage }
+    if (nativeCoverage) {
+        dependsOn tasks.named('runClientGameTest')
+    }
+    executionData nativeExecutionData
+    sourceSets sourceSets.main
+    reports {
+        html.required = true
+        html.outputLocation = layout.buildDirectory.dir("reports/jacoco/client-${nativeVariant}/html")
+        xml.required = true
+        xml.outputLocation = layout.buildDirectory.file("reports/jacoco/client-${nativeVariant}/report.xml")
+        csv.required = false
+    }
+}
+
+tasks.register('jacocoCombinedReport', JacocoReport) {
+    group = 'verification'
+    description = 'Combines unit and native coverage; requires -PnativeCoverage and local fixtures.'
+    onlyIf('native coverage was requested and local fixtures are available') { nativeCoverage }
+    if (nativeCoverage) {
+        dependsOn tasks.named('test'), tasks.named('runClientGameTest')
+    }
+    executionData nativeExecutionData
+    if (!sourceSets.test.allJava.empty) {
+        executionData layout.buildDirectory.file('jacoco/test.exec')
+    }
+    sourceSets sourceSets.main
+    reports {
+        html.required = true
+        html.outputLocation = layout.buildDirectory.dir("reports/jacoco/combined-${nativeVariant}/html")
+        xml.required = true
+        xml.outputLocation = layout.buildDirectory.file("reports/jacoco/combined-${nativeVariant}/report.xml")
+        csv.required = false
+    }
+}
