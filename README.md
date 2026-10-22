@@ -171,6 +171,28 @@ Test sources and coverage results remain local. A fresh public checkout and GitH
 CI check formatting and build the mod; coverage tasks without their local test
 sources are skipped rather than publishing a coverage percentage.
 
+Mutation testing is an explicit local check, separate from `build` and native client
+checks. With local unit test sources present, run:
+
+```sh
+./gradlew pitest
+```
+
+The pinned PIT/JUnit 5 setup first runs the unit suite, then applies `DEFAULTS`
+mutations to `DisplayFrameBudget`, `LiveGeometryEncoding` and `PassLocalBufferReuse`.
+The corresponding three test classes check budget decisions, packed geometry indices
+and pass-scoped buffer reuse without launching Minecraft. PIT changes bytecode in
+its test processes, not the source files. It is not added to the release runtime.
+
+Reports are `build/reports/pitest/index.html` and `build/reports/pitest/mutations.xml`.
+`KILLED` means a test detected a mutation; `SURVIVED` and `NO_COVERAGE` need review.
+Inspect timeouts and execution errors separately, and document equivalent mutations
+that do not change observable behavior. No mutation-score threshold is enforced yet.
+These results describe the selected unit-tested logic, not Mixin hooks, GPU rendering,
+visual fidelity or FPS. The task is skipped in a public checkout without local unit
+sources; GitHub CI does not run the private mutation suite or publish its score.
+Reports and test sources remain local.
+
 ## Roadmap
 
 Further text, framebuffer and GUI atlas optimizations are future work.
