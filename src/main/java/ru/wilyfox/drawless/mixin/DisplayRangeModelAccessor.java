@@ -9,10 +9,23 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 
 @Mixin(RangeSelectItemModel.class)
 public interface DisplayRangeModelAccessor {
-    @Accessor("property") RangeSelectItemModelProperty drawless$property();
-    @Accessor("models") ItemModel[] drawless$models();
-    @Accessor("fallback") ItemModel drawless$fallback();
-    @Accessor("scale") float drawless$scale();
-    @Accessor("thresholds") float[] drawless$thresholds();
-    @Invoker("lastIndexLessOrEqual") static int drawless$lastIndex(float[] thresholds, float value) { throw new AssertionError(); }
+  @Accessor("property")
+  RangeSelectItemModelProperty drawless$property();
+
+  @Accessor("models")
+  ItemModel[] drawless$models();
+
+  @Accessor("fallback")
+  ItemModel drawless$fallback();
+
+  @Accessor("scale")
+  float drawless$scale();
+
+  @Accessor("thresholds")
+  float[] drawless$thresholds();
+
+  @Invoker("lastIndexLessOrEqual")
+  static int drawless$lastIndex(float[] thresholds, float value) {
+    throw new AssertionError();
+  }
 }

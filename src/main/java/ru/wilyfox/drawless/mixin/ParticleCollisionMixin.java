@@ -14,8 +14,15 @@ import ru.wilyfox.drawless.performance.ParticleCollisionCache;
 
 @Mixin(Particle.class)
 public abstract class ParticleCollisionMixin {
-    @Redirect(method = "move", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;collideBoundingBox(Lnet/minecraft/world/phys/shapes/CollisionContext;Lnet/minecraft/world/phys/Vec3;Lnet/minecraft/world/phys/AABB;Lnet/minecraft/world/level/Level;Ljava/util/List;)Lnet/minecraft/world/phys/Vec3;"))
-    private Vec3 drawless$emptyCollision(CollisionContext context, Vec3 movement, AABB box, Level level, List<VoxelShape> extra) {
-        return ParticleCollisionCache.collide(context, movement, box, level, extra);
-    }
+  @Redirect(
+      method = "move",
+      at =
+          @At(
+              value = "INVOKE",
+              target =
+                  "Lnet/minecraft/world/entity/Entity;collideBoundingBox(Lnet/minecraft/world/phys/shapes/CollisionContext;Lnet/minecraft/world/phys/Vec3;Lnet/minecraft/world/phys/AABB;Lnet/minecraft/world/level/Level;Ljava/util/List;)Lnet/minecraft/world/phys/Vec3;"))
+  private Vec3 drawless$emptyCollision(
+      CollisionContext context, Vec3 movement, AABB box, Level level, List<VoxelShape> extra) {
+    return ParticleCollisionCache.collide(context, movement, box, level, extra);
+  }
 }

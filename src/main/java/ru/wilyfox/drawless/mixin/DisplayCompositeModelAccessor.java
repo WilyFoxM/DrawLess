@@ -8,5 +8,6 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(CompositeModel.class)
 public interface DisplayCompositeModelAccessor {
-    @Accessor("models") List<ItemModel> drawless$models();
+  @Accessor("models")
+  List<ItemModel> drawless$models();
 }

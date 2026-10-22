@@ -9,10 +9,11 @@ import ru.wilyfox.drawless.performance.DisplayModelBudget;
 
 @Mixin(ModelManager.class)
 public class DisplayModelReloadMixin {
-    @Inject(method = "apply", at = @At("HEAD"))
-    private void drawless$clearDisplayModels(CallbackInfo ci) {
-        DisplayModelBudget.clear();ru.wilyfox.drawless.performance.NpcFrameCache.clear();
-        ru.wilyfox.drawless.performance.ExtremeDisplayPerformance.clear();
-        ru.wilyfox.drawless.performance.LiveDisplayGeometry.reload();
-    }
+  @Inject(method = "apply", at = @At("HEAD"))
+  private void drawless$clearDisplayModels(CallbackInfo ci) {
+    DisplayModelBudget.clear();
+    ru.wilyfox.drawless.performance.NpcFrameCache.clear();
+    ru.wilyfox.drawless.performance.ExtremeDisplayPerformance.clear();
+    ru.wilyfox.drawless.performance.LiveDisplayGeometry.reload();
+  }
 }

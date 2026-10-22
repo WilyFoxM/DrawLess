@@ -8,5 +8,6 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(CuboidItemModelWrapper.class)
 public interface DisplayCuboidModelAccessor {
-    @Accessor("tints") List<ItemTintSource> drawless$tints();
+  @Accessor("tints")
+  List<ItemTintSource> drawless$tints();
 }

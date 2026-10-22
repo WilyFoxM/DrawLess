@@ -7,6 +7,9 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(SelectItemModel.class)
 public interface DisplaySelectModelAccessor {
-    @Accessor("property") SelectItemModelProperty<?> drawless$property();
-    @Accessor("models") SelectItemModel.ModelSelector<?> drawless$models();
+  @Accessor("property")
+  SelectItemModelProperty<?> drawless$property();
+
+  @Accessor("models")
+  SelectItemModel.ModelSelector<?> drawless$models();
 }
