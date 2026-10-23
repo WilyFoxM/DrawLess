@@ -1,7 +1,7 @@
 # DrawLess
 
 Client-side rendering optimizations for Minecraft **26.2**, Fabric, Java **25**.
-Base package: `ru.wilyfox.drawless`. Current development version: **1.0.0-rc.2**.
+Base package: `ru.wilyfox.drawless`. Current development version: **1.0.0-rc.3**.
 Published benchmarks retain their original **0.1.0** and **0.2.0-dev.4** build labels.
 
 DrawLess focuses on Item Display scenes, including animated ModelEngine NPCs. It reuses
@@ -114,6 +114,18 @@ with every renderer or resource pack.
 The advanced Freeze, Unrender and Pause ticks modes are diagnostic modes: they can freeze
 or hide NPCs and bosses. Keep Live geometry selected for ordinary play. The particle frustum
 cell-cache experiment was rejected and is not included.
+
+## Rendering compatibility
+
+Call-site hooks use MixinExtras
+[`@WrapOperation`](https://github.com/LlamaLad7/MixinExtras/wiki/WrapOperation)
+so multiple wrappers can compose.
+Diagnostics and ordinary fallbacks invoke the supplied operation, including particle
+cache misses and disabled paths. Known IF/Iris ownership exclusions remain in place.
+
+Caching and diagnostic modes still intentionally skip some original work. Wrapping
+does not establish compatibility with every renderer: removed injection targets,
+incompatible state ownership or changes to rendering semantics need specific handling.
 
 ## Commands and diagnostics
 
@@ -245,3 +257,6 @@ Source: [WilyFoxM/DrawLess](https://github.com/WilyFoxM/DrawLess). License: MIT.
   ordered groups to reorderable batches. LIMITED retains vanilla order permissions;
   EXPANDED evaluates the broader reordering approach using the existing group list.
   IF's scissor and group mixin implementations are not incorporated.
+- **LlamaLad7 and MixinExtras contributors** —
+  [MixinExtras](https://github.com/LlamaLad7/MixinExtras), whose composable injection
+  APIs are used by DrawLess's operation and method wrappers.

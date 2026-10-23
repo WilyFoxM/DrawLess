@@ -1,11 +1,11 @@
 package ru.wilyfox.drawless.performance;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import java.util.Arrays;
 import java.util.List;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -71,16 +71,21 @@ public final class ParticleCollisionCache {
   }
 
   public static Vec3 collide(
-      CollisionContext context, Vec3 movement, AABB box, Level level, List<VoxelShape> extra) {
+      CollisionContext context,
+      Vec3 movement,
+      AABB box,
+      Level level,
+      List<VoxelShape> extra,
+      Operation<Vec3> original) {
     if (!enabled || level != world || Thread.currentThread() != owner)
-      return Entity.collideBoundingBox(context, movement, box, level, extra);
+      return original.call(context, movement, box, level, extra);
     queries++;
     if (extra.isEmpty() && emptyVolume(box, movement)) {
       skipped++;
       return movement;
     }
     fallback++;
-    return Entity.collideBoundingBox(context, movement, box, level, extra);
+    return original.call(context, movement, box, level, extra);
   }
 
   private static boolean emptyVolume(AABB box, Vec3 movement) {

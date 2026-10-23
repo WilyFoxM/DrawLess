@@ -1,8 +1,8 @@
 package ru.wilyfox.drawless.performance;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import java.util.Arrays;
 import net.minecraft.core.BlockPos;
-import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.world.level.BlockAndLightGetter;
 
 /**
@@ -40,9 +40,8 @@ public final class ParticleLightCache {
     world = null;
   }
 
-  public static int light(BlockAndLightGetter level, BlockPos pos) {
-    if (!active || Thread.currentThread() != owner)
-      return LightCoordsUtil.getLightCoords(level, pos);
+  public static int light(BlockAndLightGetter level, BlockPos pos, Operation<Integer> original) {
+    if (!active || Thread.currentThread() != owner) return original.call(level, pos);
     if (world != level) {
       world = level;
       nextGeneration();
@@ -52,13 +51,13 @@ public final class ParticleLightCache {
     // BlockPos packing truncates coordinates beyond vanilla's range; never alias those positions.
     if (BlockPos.getX(key) != pos.getX()
         || BlockPos.getY(key) != pos.getY()
-        || BlockPos.getZ(key) != pos.getZ()) return LightCoordsUtil.getLightCoords(level, pos);
+        || BlockPos.getZ(key) != pos.getZ()) return original.call(level, pos);
     int slot = net.minecraft.util.Mth.murmurHash3Mixer((int) (key ^ (key >>> 32))) & (CAPACITY - 1);
     if (STAMPS[slot] == generation && KEYS[slot] == key) {
       hits++;
       return VALUES[slot];
     }
-    int value = LightCoordsUtil.getLightCoords(level, pos);
+    int value = original.call(level, pos);
     KEYS[slot] = key;
     VALUES[slot] = value;
     STAMPS[slot] = generation;

@@ -11,7 +11,6 @@
     "DisplayCostTickMixin",
     "DisplayCostSubmitMixin",
     "DisplayCostItemTagMixin",
-    "DisplayCostItemAccessor",
     "DisplayCostItemVerticesMixin",
     "DisplayCostItemGroupMixin",
     "DisplayCostUploadMixin",

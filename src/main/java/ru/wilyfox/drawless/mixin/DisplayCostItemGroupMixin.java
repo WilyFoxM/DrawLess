@@ -1,12 +1,13 @@
 package ru.wilyfox.drawless.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.client.renderer.feature.ItemFeatureRenderer;
 import net.minecraft.client.renderer.feature.RenderTypeFeatureRenderer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import ru.wilyfox.drawless.diagnostics.DisplayCostProbe;
 
@@ -31,7 +32,7 @@ public class DisplayCostItemGroupMixin {
     }
   }
 
-  @Redirect(
+  @WrapOperation(
       method = "executeGroup",
       at =
           @At(
@@ -40,7 +41,8 @@ public class DisplayCostItemGroupMixin {
                   "Lnet/minecraft/client/renderer/rendertype/PreparedRenderType;drawFromBuffer(Lnet/minecraft/client/renderer/StagedVertexBuffer$ExecuteInfo;)V"))
   private void drawless$itemDraw(
       net.minecraft.client.renderer.rendertype.PreparedRenderType type,
-      net.minecraft.client.renderer.StagedVertexBuffer.ExecuteInfo info) {
+      net.minecraft.client.renderer.StagedVertexBuffer.ExecuteInfo info,
+      Operation<Void> original) {
     if ((Object) this instanceof ItemFeatureRenderer) DisplayCostProbe.itemDraw();
     var metrics = ru.wilyfox.drawless.diagnostics.RenderMetrics.getInstance();
     if (metrics.isEnabled()
@@ -48,9 +50,9 @@ public class DisplayCostItemGroupMixin {
         && !ru.wilyfox.drawless.compat.RenderModSupport.IMMEDIATELY_FAST
         && !ru.wilyfox.drawless.compat.RenderModSupport.IRIS) {
       try (var ignored = metrics.scope("render/featureBatching/submitDraw")) {
-        type.drawFromBuffer(info);
+        original.call(type, info);
         metrics.incrementCounter("featureBatching/drawSubmissions", 1);
       }
-    } else type.drawFromBuffer(info);
+    } else original.call(type, info);
   }
 }
