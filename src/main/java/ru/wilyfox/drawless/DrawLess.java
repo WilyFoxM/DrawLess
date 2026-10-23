@@ -10,7 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.wilyfox.drawless.config.DrawLessConfig;
 import ru.wilyfox.drawless.diagnostics.*;
-import ru.wilyfox.drawless.gui.OpenSettings;
+import ru.wilyfox.drawless.gui.SettingsKeyBinding;
 import ru.wilyfox.drawless.performance.*;
 
 public final class DrawLess implements ClientModInitializer {
@@ -19,8 +19,7 @@ public final class DrawLess implements ClientModInitializer {
   @Override
   public void onInitializeClient() {
     DrawLessConfig.load();
-    net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(
-        OpenSettings::openPending);
+    SettingsKeyBinding.register();
     DisplayModelBudget.register();
     NpcFrameCache.register();
     ExtremeDisplayPerformance.register();
@@ -32,18 +31,6 @@ public final class DrawLess implements ClientModInitializer {
         (dispatcher, access) ->
             dispatcher.register(
                 ClientCommands.literal("drawless")
-                    .executes(
-                        context -> {
-                          new OpenSettings().run();
-                          return 1;
-                        })
-                    .then(
-                        ClientCommands.literal("settings")
-                            .executes(
-                                context -> {
-                                  new OpenSettings().run();
-                                  return 1;
-                                }))
                     .then(
                         ClientCommands.literal("status")
                             .executes(

@@ -1,7 +1,7 @@
 # DrawLess
 
 Client-side rendering optimizations for Minecraft **26.2**, Fabric, Java **25**.
-Base package: `ru.wilyfox.drawless`. Current development version: **1.0.0-rc.1**.
+Base package: `ru.wilyfox.drawless`. Current development version: **1.0.0-rc.2**.
 Published benchmarks retain their original **0.1.0** and **0.2.0-dev.4** build labels.
 
 DrawLess focuses on Item Display scenes, including animated ModelEngine NPCs. It reuses
@@ -39,7 +39,8 @@ ImmediatelyFast is also optional and currently supplies additional global optimi
 Neither mod is embedded or required to load DrawLess. No server-side component is needed.
 
 Settings are stored in `config/drawless.json`.
-Use **`/drawless settings`** to open its settings screen.
+Press **F8** in-game to open settings. Rebind **DrawLess → Open settings** under
+Minecraft **Options → Controls → Key Binds**. The key does not replace other screens.
 
 Settings use the DrawLess navy/orange palette, with categories for Rendering,
 Particles, Advanced and Diagnostics. Search finds settings across all categories;
@@ -116,7 +117,7 @@ cell-cache experiment was rejected and is not included.
 
 ## Commands and diagnostics
 
-- `/drawless` or `/drawless settings`: settings.
+- **F8** (rebindable): settings.
 - `/drawless status`: current renderer status, coverage and fallback reasons.
 - `/drawless probe <label>`: 2 seconds warmup, then a 20-second probe with automatic saving.
 - `/drawless probe status`: probe status and last output path.
@@ -131,6 +132,13 @@ The master switch disables DrawLess optimizations while preserving the diagnosti
 Compare particle/entity populations, control drift and stage time alongside FPS.
 
 ## Build and local validation
+
+User-facing text must use translation keys with matching English (`en_us.json`)
+and Russian (`ru_ru.json`) entries. This includes future menus, key bindings,
+tooltips, status messages and errors. Use complete messages with placeholders;
+keep key sets and format arguments aligned, and check both languages in compact
+layouts. Product names, command/config identifiers and stable diagnostic report
+field names remain literal. Follow the Minecraft language selection.
 
 ```sh
 ./gradlew build

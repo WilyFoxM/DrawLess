@@ -1,4 +1,6 @@
 {
+  "key.category.drawless.main": "DrawLess",
+  "key.drawless.open_settings": "Открыть настройки",
   "drawless.search": "Поиск настроек…",
   "drawless.results": "Результаты поиска · %s",
   "drawless.no_results": "Настройки не найдены",

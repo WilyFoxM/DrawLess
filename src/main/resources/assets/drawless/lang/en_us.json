@@ -1,4 +1,6 @@
 {
+  "key.category.drawless.main": "DrawLess",
+  "key.drawless.open_settings": "Open settings",
   "drawless.search": "Search settings…",
   "drawless.results": "Search results · %s",
   "drawless.no_results": "No matching settings",

@@ -1,5 +1,6 @@
 package ru.wilyfox.drawless.gui;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -148,7 +149,12 @@ final class SettingRow extends Button {
   @Override
   protected void onDrag(MouseButtonEvent event, double dx, double dy) {
     if (!dragging) return;
-    dragRemainder += (event.x() - dragX) / (event.hasShiftDown() ? 12 : 3);
+    // MouseHandler retains the mouse-down modifiers throughout the drag.
+    var window = Minecraft.getInstance().getWindow();
+    boolean fine =
+        InputConstants.isKeyDown(window, org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT)
+            || InputConstants.isKeyDown(window, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT);
+    dragRemainder += (event.x() - dragX) / (fine ? 12 : 3);
     dragX = event.x();
     int steps = (int) dragRemainder;
     dragRemainder -= steps;
