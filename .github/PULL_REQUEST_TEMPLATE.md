@@ -4,7 +4,7 @@
 
 ## Validation performed
 
-- GitHub build:
+- GitHub checks (build, unit-tests, spotless):
 - Local checks actually run (configuration and result):
 - Rendering screenshots / benchmark evidence, where relevant:
 
@@ -12,5 +12,5 @@
 
 <!-- State fallback behavior, untested configurations and remaining uncertainty. -->
 
-<!-- Local test sources and QA artifacts remain private/local by project policy.
-A CI build is not evidence that those local tests ran on GitHub. -->
+<!-- CI runs the published pure-logic unit tests. Native client fixtures, remaining
+local tests and QA artifacts stay local; CI does not validate rendered pixels or FPS. -->
