@@ -1,11 +1,12 @@
 package ru.wilyfox.drawless.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.client.renderer.entity.state.ItemDisplayEntityRenderState;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import ru.wilyfox.drawless.bridge.DisplayLayerOwnership;
 import ru.wilyfox.drawless.performance.DisplayModelBudget;
 
@@ -14,13 +15,13 @@ public class DisplayItemStateAllocationMixin implements DisplayLayerOwnership {
   @Unique private boolean drawless$borrowedLayers;
   @Unique private long drawless$safeLayerFrame;
 
-  @Redirect(
+  @WrapOperation(
       method = "<init>",
       at = @At(value = "NEW", target = "net/minecraft/client/renderer/item/ItemStackRenderState"))
-  private ItemStackRenderState drawless$initialLayers() {
+  private ItemStackRenderState drawless$initialLayers(Operation<ItemStackRenderState> original) {
     var cached = DisplayModelBudget.takeConstructorLayers();
     drawless$borrowedLayers = cached != null;
-    return cached != null ? cached : new ItemStackRenderState();
+    return cached != null ? cached : original.call();
   }
 
   @Override

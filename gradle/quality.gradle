@@ -29,7 +29,7 @@ tasks.withType(Test).configureEach {
 
 tasks.named('jacocoTestReport', JacocoReport) {
     dependsOn tasks.named('test')
-    onlyIf('local unit test sources are available') { !sourceSets.test.allJava.empty }
+    onlyIf('unit test sources are available') { !sourceSets.test.allJava.empty }
     reports {
         html.required = true
         xml.required = true

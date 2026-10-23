@@ -1,5 +1,7 @@
 package ru.wilyfox.drawless.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.client.renderer.entity.DisplayRenderer;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
@@ -7,12 +9,11 @@ import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import ru.wilyfox.drawless.performance.DisplayModelBudget;
 
 @Mixin(EntityRenderer.class)
 public class DisplayStateFactoryMixin {
-  @Redirect(
+  @WrapOperation(
       method =
           "createRenderState(Lnet/minecraft/world/entity/Entity;F)Lnet/minecraft/client/renderer/entity/state/EntityRenderState;",
       at =
@@ -21,16 +22,19 @@ public class DisplayStateFactoryMixin {
               target =
                   "Lnet/minecraft/client/renderer/entity/EntityRenderer;createRenderState()Lnet/minecraft/client/renderer/entity/state/EntityRenderState;"))
   private EntityRenderState drawless$createState(
-      EntityRenderer<?, ?> renderer, Entity source, float partialTick) {
+      EntityRenderer<?, ?> renderer,
+      Operation<EntityRenderState> original,
+      Entity source,
+      float partialTick) {
     if (source instanceof Display.ItemDisplay item) {
       var recycled = ru.wilyfox.drawless.performance.DisplayExtractionCache.borrow(renderer, item);
       if (recycled != null) return recycled;
     }
     if (renderer.getClass() != DisplayRenderer.ItemDisplayRenderer.class
         || !(source instanceof Display.ItemDisplay display)
-        || !DisplayModelBudget.seedConstructorLayers(display)) return renderer.createRenderState();
+        || !DisplayModelBudget.seedConstructorLayers(display)) return original.call(renderer);
     try {
-      return renderer.createRenderState();
+      return original.call(renderer);
     } finally {
       DisplayModelBudget.clearConstructorLayers();
     }

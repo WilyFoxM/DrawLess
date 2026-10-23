@@ -23,7 +23,7 @@ pitest {
 
 tasks.named('pitest') {
     group = 'verification'
-    description = 'Mutates selected pure logic; requires local unit test sources.'
+    description = 'Mutates selected pure logic using the published unit tests.'
     dependsOn tasks.named('test')
-    onlyIf('local unit test sources are available') { !sourceSets.test.allJava.empty }
+    onlyIf('unit test sources are available') { !sourceSets.test.allJava.empty }
 }

@@ -14,7 +14,11 @@ node_modules/
 *.py[cod]
 
 # Tests, fixtures and local validation
-/src/test/
+/src/test/**
+!/src/test/**/
+!/src/test/java/ru/wilyfox/drawless/performance/DisplayFrameBudgetTest.java
+!/src/test/java/ru/wilyfox/drawless/performance/LiveGeometryEncodingTest.java
+!/src/test/java/ru/wilyfox/drawless/performance/PassLocalBufferReuseTest.java
 /src/gametest/
 /src/integrationTest/
 /src/testFixtures/
