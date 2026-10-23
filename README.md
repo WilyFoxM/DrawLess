@@ -1,8 +1,8 @@
 # DrawLess
 
 Client-side rendering optimizations for Minecraft **26.2**, Fabric, Java **25**.
-Base package: `ru.wilyfox.drawless`. Current version: **0.2.0**;
-published benchmark results below refer to **0.1.0**.
+Base package: `ru.wilyfox.drawless`. Current development version: **1.0.0-rc.1**.
+Published benchmarks retain their original **0.1.0** and **0.2.0-dev.4** build labels.
 
 DrawLess focuses on Item Display scenes, including animated ModelEngine NPCs. It reuses
 local model geometry while streaming the current transforms, light and tint, then batches
@@ -41,6 +41,20 @@ Neither mod is embedded or required to load DrawLess. No server-side component i
 Settings are stored in `config/drawless.json`.
 Use **`/drawless settings`** to open its settings screen.
 
+Settings use the DrawLess navy/orange palette, with categories for Rendering,
+Particles, Advanced and Diagnostics. Search finds settings across all categories;
+hover a row for its full description. ON/OFF controls, reversible mode selectors
+and draggable numeric fields keep values separate from their labels. Left/right
+arrows adjust focused controls; Tab moves focus and scrolls settings into view.
+Use Ctrl+F for search, or Page Up/Down to scroll. Escape clears a search before
+closing the menu. Numeric dragging supports Shift for finer adjustment.
+
+Changes apply immediately and save automatically after an interaction. Resetting
+all settings requires confirmation. Unavailable IF/Iris-owned controls explain why
+they cannot be edited and preserve the saved preference. English and Russian menu
+translations follow the Minecraft language setting. This release candidate changes
+the settings experience; it introduces no new rendering optimizations or benchmark claims.
+
 ## Included
 
 - A bounded Item Display model-layer cache with an adjustable/adaptive refresh budget.
@@ -65,7 +79,7 @@ is claimed yet. With `/drawless profile start`, counters report requests, reused
 results and remaining lookups for both OFF and ON; the preparation scope includes
 vanilla work. Capture detailed CPU profiles separately from throughput runs.
 
-Feature batching cycles OFF → LIMITED → EXPANDED on the Advanced settings page.
+Feature batching cycles OFF → LIMITED → EXPANDED on the Rendering settings page.
 It compares pipeline,
 output target, GPU transform slice, texture/sampler bindings and scissor values using
 the group's existing material list. It retains no additional cache and does not change
@@ -81,7 +95,7 @@ in alpha blending and opaque overdraw when an ordered A/B/A sequence becomes A/A
 These are known fidelity limitations, not successful image-parity results. The operator
 reported no visible issues while playing with EXPANDED across three locations; this
 does not establish equivalence for every material or resource pack. Switch to LIMITED
-or OFF in Advanced settings if overlapping text, backgrounds or layers look incorrect.
+or OFF in Rendering settings if overlapping text, backgrounds or layers look incorrect.
 
 Detailed profiles record searches, reused draws, misses and actual draw submissions;
 `promotedSearches` and `promotedReuses` identify work enabled by lifting the order restriction.
