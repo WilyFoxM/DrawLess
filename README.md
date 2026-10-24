@@ -30,6 +30,16 @@ Drag numbers to adjust them, hold Shift for finer control, or use the keyboard.
 Changes save automatically; resetting settings requires confirmation.
 Existing configurations are preserved when updating.
 
+For an automatic OFF/ON comparison, use `/drawless benchmark 1 scene` (one ON run)
+or `/drawless benchmark 3 scene` (three ON runs), each bracketed by OFF controls.
+Close chat and keep the camera still. Each phase records 20 seconds after 2 seconds
+of warmup. Add `particles`, `particle_light`, `particle_collision`, `text` or `batching`
+after the label to compare just that feature; otherwise the master switch is compared
+using your current ON preferences. Settings are restored automatically. Opening a
+screen, moving, losing focus or changing settings stops the series. Reports and a
+summary are saved in `drawless-reports`; `/drawless benchmark cancel` stops a run.
+Automatic summaries require review before publication.
+
 ## Compatibility
 
 DrawLess works standalone or with Sodium; Sodium **0.9.2** is the tested version.
