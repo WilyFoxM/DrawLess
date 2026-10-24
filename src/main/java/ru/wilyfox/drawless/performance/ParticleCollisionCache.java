@@ -9,6 +9,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -28,6 +29,7 @@ public final class ParticleCollisionCache {
   private static ClientLevel world;
   private static boolean enabled, lastEnabled;
   private static long queries, hits, skipped, fallback, blockReads, invalidations;
+  private static long sectionChecks, airSections, sectionChecksTotal, airSectionsTotal;
   private static long ticksTotal,
       queriesTotal,
       hitsTotal,
@@ -39,15 +41,22 @@ public final class ParticleCollisionCache {
   private ParticleCollisionCache() {}
 
   public static void beginTick(boolean on, ClientLevel level) {
+    if (!ParticleSpatialContext.clientThread()) return;
     lastEnabled = on;
-    enabled = on && level != null && level.getClass() == ClientLevel.class;
+    enabled =
+        on
+            && level != null
+            && level.getClass() == ClientLevel.class
+            && ParticleSpatialContext.bind(level);
     world = enabled ? level : null;
     owner = enabled ? Thread.currentThread() : null;
     queries = hits = skipped = fallback = blockReads = invalidations = 0;
+    sectionChecks = airSections = 0;
     if (enabled) nextGeneration();
   }
 
   public static void endTick() {
+    if (!ParticleSpatialContext.clientThread()) return;
     if (enabled) {
       ticksTotal++;
       queriesTotal += queries;
@@ -56,6 +65,8 @@ public final class ParticleCollisionCache {
       fallbackTotal += fallback;
       blockReadsTotal += blockReads;
       invalidationsTotal += invalidations;
+      sectionChecksTotal += sectionChecks;
+      airSectionsTotal += airSections;
     }
     enabled = false;
     owner = null;
@@ -77,7 +88,10 @@ public final class ParticleCollisionCache {
       Level level,
       List<VoxelShape> extra,
       Operation<Vec3> original) {
-    if (!enabled || level != world || Thread.currentThread() != owner)
+    if (!enabled
+        || level != world
+        || Thread.currentThread() != owner
+        || !ParticleSpatialContext.owns(world))
       return original.call(context, movement, box, level, extra);
     queries++;
     if (extra.isEmpty() && emptyVolume(box, movement)) {
@@ -112,6 +126,7 @@ public final class ParticleCollisionCache {
         || maxY > 2045) return false;
     // Match BlockCollisions' swept box + epsilon + one-block neighbourhood. Include even its
     // skipped outer corners: proving a larger region empty is conservative for every context.
+    // Whole-air sections need no per-block reads; nonempty sections keep a 64-cell scan budget.
     int x0 = Mth.floor(minX - 1e-7) - 1,
         y0 = Mth.floor(minY - 1e-7) - 1,
         z0 = Mth.floor(minZ - 1e-7) - 1;
@@ -119,8 +134,11 @@ public final class ParticleCollisionCache {
         y1 = Mth.floor(maxY + 1e-7) + 1,
         z1 = Mth.floor(maxZ + 1e-7) + 1;
     int sx = x1 - x0 + 1, sy = y1 - y0 + 1, sz = z1 - z0 + 1;
-    if (sx > 4 || sy > 4 || sz > 4) return false; // At most 64 reads for a new proof.
-    int size = sx | sy << 3 | sz << 6;
+    int nx = (x1 >> 4) - (x0 >> 4) + 1,
+        ny = (y1 >> 4) - (y0 >> 4) + 1,
+        nz = (z1 >> 4) - (z0 >> 4) + 1;
+    if (nx > 8 || ny > 8 || nz > 8 || nx * ny * nz > 8) return false;
+    int size = sx | sy << 8 | sz << 16;
     long key = BlockPos.asLong(x0, y0, z0);
     int slot =
         Mth.murmurHash3Mixer((int) (key ^ (key >>> 32)) ^ size * 0x9e3779b9) & (CAPACITY - 1);
@@ -129,7 +147,7 @@ public final class ParticleCollisionCache {
       return RESULTS[slot] == 1;
     }
     int before = generation;
-    boolean clear = scanAir(x0, y0, z0, x1, y1, z1);
+    boolean clear = scanAir(x0, y0, z0, x1, y1, z1, (long) sx * sy * sz <= 64);
     if (before != generation) return false;
     STAMPS[slot] = generation;
     KEYS[slot] = key;
@@ -138,23 +156,32 @@ public final class ParticleCollisionCache {
     return clear;
   }
 
-  private static boolean scanAir(int x0, int y0, int z0, int x1, int y1, int z1) {
-    BlockGetter chunk = null;
-    int lastX = Integer.MIN_VALUE, lastZ = Integer.MIN_VALUE;
-    for (int x = x0; x <= x1; x++)
-      for (int z = z0; z <= z1; z++) {
-        int cx = x >> 4, cz = z >> 4;
-        if (cx != lastX || cz != lastZ) {
-          chunk = world.getChunkForCollisions(cx, cz);
-          lastX = cx;
-          lastZ = cz;
-        }
+  private static boolean scanAir(int x0, int y0, int z0, int x1, int y1, int z1, boolean small) {
+    for (int cx = x0 >> 4; cx <= x1 >> 4; cx++)
+      for (int cz = z0 >> 4; cz <= z1 >> 4; cz++) {
+        BlockGetter chunk = ParticleSpatialContext.chunk(world, cx, cz);
         if (chunk == null) return false; // Never load chunks for this optimization.
-        for (int y = y0; y <= y1; y++) {
-          var state = chunk.getBlockState(POS.set(x, y, z));
-          blockReads++;
-          if (!(state.is(Blocks.AIR) || state.is(Blocks.CAVE_AIR) || state.is(Blocks.VOID_AIR)))
-            return false;
+        for (int cy = y0 >> 4; cy <= y1 >> 4; cy++) {
+          if (chunk.getClass() == LevelChunk.class) {
+            var levelChunk = (LevelChunk) chunk;
+            int sectionIndex = levelChunk.getSectionIndex(cy << 4);
+            if (sectionIndex < 0 || sectionIndex >= levelChunk.getSections().length) continue;
+            sectionChecks++;
+            if (levelChunk.getSection(sectionIndex).hasOnlyAir()) {
+              airSections++;
+              continue;
+            }
+          }
+          if (!small) return false;
+          for (int x = Math.max(x0, cx << 4); x <= Math.min(x1, (cx << 4) + 15); x++)
+            for (int z = Math.max(z0, cz << 4); z <= Math.min(z1, (cz << 4) + 15); z++)
+              for (int y = Math.max(y0, cy << 4); y <= Math.min(y1, (cy << 4) + 15); y++) {
+                var state = chunk.getBlockState(POS.set(x, y, z));
+                blockReads++;
+                if (!(state.is(Blocks.AIR)
+                    || state.is(Blocks.CAVE_AIR)
+                    || state.is(Blocks.VOID_AIR))) return false;
+              }
         }
       }
     return true;
@@ -195,6 +222,10 @@ public final class ParticleCollisionCache {
         + "; blockReadsTotal="
         + blockReadsTotal
         + "; invalidationsTotal="
-        + invalidationsTotal;
+        + invalidationsTotal
+        + "; sectionChecksTotal="
+        + sectionChecksTotal
+        + "; airSectionsTotal="
+        + airSectionsTotal;
   }
 }

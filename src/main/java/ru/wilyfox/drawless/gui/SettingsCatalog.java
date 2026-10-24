@@ -135,13 +135,15 @@ final class SettingsCatalog {
             "particle_light",
             Page.PARTICLES,
             () -> c().particleLightCache,
-            v -> c().particleLightCache = v));
+            v -> c().particleLightCache = v,
+            () -> RenderModSupport.PARTICLE_CACHES ? null : reason("particle_pipeline")));
     options.add(
         toggle(
             "particle_collision",
             Page.PARTICLES,
             () -> c().particleEmptyCollision,
-            v -> c().particleEmptyCollision = v));
+            v -> c().particleEmptyCollision = v,
+            () -> RenderModSupport.PARTICLE_CACHES ? null : reason("particle_pipeline")));
     options.add(
         toggle(
             "npc_budget",
@@ -217,6 +219,15 @@ final class SettingsCatalog {
   }
 
   private static Option toggle(String id, Page page, BooleanSupplier get, Consumer<Boolean> set) {
+    return toggle(id, page, get, set, () -> null);
+  }
+
+  private static Option toggle(
+      String id,
+      Page page,
+      BooleanSupplier get,
+      Consumer<Boolean> set,
+      Supplier<Component> unavailable) {
     return new Option(
         id,
         page,
@@ -224,7 +235,7 @@ final class SettingsCatalog {
         () -> onOff(get.getAsBoolean()),
         d -> set.accept(!get.getAsBoolean()),
         get,
-        () -> null,
+        unavailable,
         null,
         null,
         0,

@@ -93,7 +93,7 @@ final class BenchmarkReport {
     warnings.add(
         "One scene/session; no confidence interval, GPU time or visual-parity conclusion is inferred.");
     warnings.add(
-        "Particle CPU extraction timings exclude later vertex preparation and GPU execution; inspect raw reports.");
+        "Particle stage timings are CPU-only; encoding is nested in preparation. Shared upload and GPU execution are not isolated.");
     json.add("pairs", gson.toJsonTree(pairs));
     json.add("review_flags", gson.toJsonTree(warnings));
     json.addProperty("publication_status", "manual_review_required");
