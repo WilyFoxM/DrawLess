@@ -51,7 +51,9 @@ public final class BenchmarkSeries {
 
     boolean unavailable() {
       return (this == TEXT || this == BATCHING) && RenderModSupport.IMMEDIATELY_FAST
-          || this == BATCHING && RenderModSupport.IRIS;
+          || this == BATCHING && RenderModSupport.IRIS
+          || (this == PARTICLES || this == PARTICLE_LIGHT || this == PARTICLE_COLLISION)
+              && !RenderModSupport.PARTICLE_CACHES;
     }
   }
 

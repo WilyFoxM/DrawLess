@@ -8,6 +8,15 @@ public final class RenderModSupport {
   public static final boolean SODIUM = LOADER.isModLoaded("sodium");
   public static final boolean IRIS = LOADER.isModLoaded("iris");
   public static final boolean IMMEDIATELY_FAST = LOADER.isModLoaded("immediatelyfast");
+  public static final boolean PARTICLE_CORE = LOADER.isModLoaded("particle_core");
+  public static final boolean ASYNC_PARTICLES = LOADER.isModLoaded("asyncparticles");
+  public static final boolean PARTICLE_CACHES = !PARTICLE_CORE && !ASYNC_PARTICLES;
+  public static final boolean TEMPORAL_PARTICLE_LIGHT =
+      PARTICLE_CACHES
+          && !IRIS
+          && !LOADER.isModLoaded("lambdynlights")
+          && !LOADER.isModLoaded("ryoamiclights")
+          && !LOADER.isModLoaded("dynamiclights");
 
   private RenderModSupport() {}
 }

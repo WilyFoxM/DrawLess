@@ -406,16 +406,16 @@ public final class DisplayProbe {
     for (Sample sample : samples)
       out.append(String.format(Locale.ROOT, "| %.2f | %s |\n", sample.seconds, sample.extreme));
     out.append(
-        "\n## Particle light cache by sample\n\nExact block light is shared only within a single extraction pass. Counts describe the previous completed particle pass; Total counters are cumulative enabled passes, not per-second rates. Motion, collisions, count, lifetime and subclass light overrides are unchanged.\n\n| s | Particle lighting |\n| ---: | --- |\n");
+        "\n## Particle light cache by sample\n\nBase light is shared within the client tick while world and published-light data remain valid; unsupported temporal integrations use pass-local reuse. Cross-frame hits reuse entries captured in an earlier extraction pass. Shared chunk knowledge is bounded and cleared by lifecycle changes. Counts describe the previous completed particle pass; Total counters are cumulative enabled passes, not per-second rates. Motion, collisions, count, lifetime and subclass light overrides are unchanged.\n\n| s | Particle lighting |\n| ---: | --- |\n");
     for (Sample sample : samples)
       out.append(String.format(Locale.ROOT, "| %.2f | %s |\n", sample.seconds, sample.particles));
     out.append(
-        "\n## Particle collision fast path by sample\n\nOnly proven all-air scan volumes skip collision collection. Any non-air block or unsupported volume uses vanilla. Proof hits include blocked proofs; emptySkips counts actual bypasses. Tick counters and Total counters are separate from frame counters.\n\n| s | Particle collisions |\n| ---: | --- |\n");
+        "\n## Particle collision fast path by sample\n\nOnly proven all-air scan volumes skip collision collection. Up to eight whole-air chunk sections can prove a volume without block reads; nonempty sections keep a 64-cell scan budget. Any non-air block or unsupported volume uses vanilla. Proof hits include blocked proofs; emptySkips counts actual bypasses. Tick counters and Total counters are separate from frame counters.\n\n| s | Particle collisions |\n| ---: | --- |\n");
     for (Sample sample : samples)
       out.append(
           String.format(Locale.ROOT, "| %.2f | %s |\n", sample.seconds, sample.particleCollision));
     out.append(
-        "\n## Particle workload by sample\n\nCoarse timing is collected only during this explicit probe, even with detailed profiling OFF. Difference cumulative times/counts between samples; tick time is per tick, extraction time per rendered frame. Timings exclude later particle vertex preparation and GPU execution. Population counts cover engine groups, including particles outside the camera; pointQueries/visible count unmodified vanilla quad-particle visibility decisions, without per-particle timers. The experimental frustum cell cache has been removed.\n\n| s | Loaded particle groups | Cumulative timings and visibility |\n| ---: | --- | --- |\n");
+        "\n## Particle workload by sample\n\nCoarse timing is collected only during this explicit probe, even with detailed profiling OFF. Difference cumulative times/counts between samples; tick time is per tick, extraction time per rendered frame. Vertex encoding (buildLayer), preparation (inclusive of encoding) and execute-group CPU submission are measured separately. Their counts are stage invocations, not rendered frames; do not add nested scopes. Shared staging uploads and GPU execution are not isolated by these timers. Population counts cover engine groups, including particles outside the camera; pointQueries/visible count unmodified vanilla quad-particle visibility decisions, without per-particle timers. The experimental frustum cell cache has been removed.\n\n| s | Loaded particle groups | Cumulative timings and visibility |\n| ---: | --- | --- |\n");
     for (Sample sample : samples)
       out.append(
           String.format(
@@ -493,8 +493,22 @@ public final class DisplayProbe {
               + config.adaptiveDisplayModelBudget
               + "; particle light cache "
               + config.particleLightCache
+              + "; particle light cache effective "
+              + (config.enabled
+                  && config.particleLightCache
+                  && ru.wilyfox.drawless.compat.RenderModSupport.PARTICLE_CACHES)
+              + "; temporal particle light available "
+              + ru.wilyfox.drawless.compat.RenderModSupport.TEMPORAL_PARTICLE_LIGHT
               + "; particle empty collision "
               + config.particleEmptyCollision
+              + "; particle empty collision effective "
+              + (config.enabled
+                  && config.particleEmptyCollision
+                  && ru.wilyfox.drawless.compat.RenderModSupport.PARTICLE_CACHES)
+              + "; Particle Core "
+              + ru.wilyfox.drawless.compat.RenderModSupport.PARTICLE_CORE
+              + "; AsyncParticles "
+              + ru.wilyfox.drawless.compat.RenderModSupport.ASYNC_PARTICLES
               + "; particle visibility vanilla"
               + "; NPC pose budget "
               + config.modelEngineNpcBudget

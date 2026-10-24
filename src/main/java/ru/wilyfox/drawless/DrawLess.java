@@ -24,6 +24,7 @@ public final class DrawLess implements ClientModInitializer {
     NpcFrameCache.register();
     ExtremeDisplayPerformance.register();
     LiveDisplayGeometry.register();
+    ParticleSpatialContext.register();
     DisplayProbe.register();
     DisplayCostProbe.register();
     BenchmarkSeries.register();

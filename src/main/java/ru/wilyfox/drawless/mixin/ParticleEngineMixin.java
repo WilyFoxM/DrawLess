@@ -19,7 +19,10 @@ public abstract class ParticleEngineMixin {
     long start = ParticleWorkProbe.begin();
     var config = DrawLessConfig.get();
     ParticleCollisionCache.beginTick(
-        config.enabled && config.particleEmptyCollision, Minecraft.getInstance().level);
+        config.enabled
+            && config.particleEmptyCollision
+            && ru.wilyfox.drawless.compat.RenderModSupport.PARTICLE_CACHES,
+        Minecraft.getInstance().level);
     try (var ignored = RenderMetrics.getInstance().scope("render/particles/tick")) {
       original.call();
     } finally {
@@ -37,7 +40,11 @@ public abstract class ParticleEngineMixin {
       Operation<Void> original) {
     long start = ParticleWorkProbe.frameBegin();
     var config = DrawLessConfig.get();
-    ParticleLightCache.beginFrame(config.enabled && config.particleLightCache);
+    ParticleLightCache.beginFrame(
+        config.enabled
+            && config.particleLightCache
+            && ru.wilyfox.drawless.compat.RenderModSupport.PARTICLE_CACHES,
+        Minecraft.getInstance().level);
     try (var ignored = RenderMetrics.getInstance().scope("render/particles/frame")) {
       original.call(state, frustum, camera, tick);
     } finally {

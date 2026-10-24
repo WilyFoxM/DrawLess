@@ -50,9 +50,9 @@
   "drawless.setting.model_budget": "Model refresh budget",
   "drawless.setting.model_budget.description": "CPU budget per frame, from 100 to 5000 microseconds. A larger budget permits more refresh work.",
   "drawless.setting.particle_light": "Particle light cache",
-  "drawless.setting.particle_light.description": "Experimental. Shares exact-position light lookups within one extraction pass. Off by default.",
+  "drawless.setting.particle_light.description": "Experimental. Reuses base light and immutable positions. Light reuse is invalidated by ticks and world/light changes; some integrations use pass-local reuse. Off by default.",
   "drawless.setting.particle_collision": "Empty collision cache",
-  "drawless.setting.particle_collision.description": "Experimental. Skips particle collision queries only for proven all-air volumes. Off by default.",
+  "drawless.setting.particle_collision.description": "Experimental. Skips collision work for proven air volumes, using whole-air chunk sections when possible. Count, movement and collision shapes are preserved. Off by default.",
   "drawless.setting.npc_budget": "NPC pose budget",
   "drawless.setting.npc_budget.description": "Experimental. Limits NPC pose refresh work and can reduce animation update frequency.",
   "drawless.setting.npc_groups": "NPC groups per frame",
@@ -93,5 +93,6 @@
   "drawless.benchmark.reason.incomplete_phase": "phase has too few samples or interrupted frames",
   "drawless.benchmark.reason.save_failed": "phase report could not be saved",
   "drawless.benchmark.reason.timeout": "phase timed out",
-  "drawless.benchmark.reason.cancelled": "cancelled"
+  "drawless.benchmark.reason.cancelled": "cancelled",
+  "drawless.unavailable.particle_pipeline": "Particle Core or AsyncParticles manages this pipeline. Your saved DrawLess preference is preserved."
 }

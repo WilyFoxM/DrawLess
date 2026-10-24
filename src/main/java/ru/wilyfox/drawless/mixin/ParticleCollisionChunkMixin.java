@@ -7,19 +7,20 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import ru.wilyfox.drawless.performance.ParticleCollisionCache;
 
 @Mixin(ClientChunkCache.class)
 public abstract class ParticleCollisionChunkMixin {
   @Inject(
       method = {"drop", "updateViewCenter", "updateViewRadius"},
-      at = @At("HEAD"))
+      at = {@At("HEAD"), @At("RETURN")})
   private void drawless$chunksChanged(CallbackInfo ci) {
-    ParticleCollisionCache.invalidate();
+    ru.wilyfox.drawless.performance.ParticleSpatialContext.chunksChanged();
   }
 
-  @Inject(method = "replaceWithPacketData", at = @At("HEAD"))
+  @Inject(
+      method = "replaceWithPacketData",
+      at = {@At("HEAD"), @At("RETURN")})
   private void drawless$chunkReplaced(CallbackInfoReturnable<LevelChunk> cir) {
-    ParticleCollisionCache.invalidate();
+    ru.wilyfox.drawless.performance.ParticleSpatialContext.chunksChanged();
   }
 }

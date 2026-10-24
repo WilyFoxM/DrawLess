@@ -9,21 +9,28 @@ public final class ParticleWorkProbe {
   private static long ticks, frames, tickNanos, frameNanos;
   private static long points, visible, pointsTotal, visibleTotal;
   private static boolean frameCollecting;
+  private static long vertexPasses,
+      vertexNanos,
+      preparePasses,
+      prepareNanos,
+      executePasses,
+      executeNanos;
 
   private ParticleWorkProbe() {}
 
   public static long begin() {
-    return DisplayProbe.running() ? System.nanoTime() : 0;
+    return ParticleSpatialContext.clientThread() && DisplayProbe.running() ? System.nanoTime() : 0;
   }
 
   public static long frameBegin() {
+    if (!ParticleSpatialContext.clientThread()) return 0;
     frameCollecting = DisplayProbe.running();
     points = visible = 0;
     return frameCollecting ? System.nanoTime() : 0;
   }
 
   public static boolean point(boolean result) {
-    if (frameCollecting) {
+    if (frameCollecting && ParticleSpatialContext.clientThread()) {
       points++;
       if (result) visible++;
     }
@@ -38,6 +45,7 @@ public final class ParticleWorkProbe {
   }
 
   public static void frameEnd(long start) {
+    if (!ParticleSpatialContext.clientThread()) return;
     if (start != 0) {
       frameNanos += System.nanoTime() - start;
       frames++;
@@ -45,6 +53,27 @@ public final class ParticleWorkProbe {
       visibleTotal += visible;
     }
     frameCollecting = false;
+  }
+
+  public static void vertexEnd(long start) {
+    if (start != 0) {
+      vertexPasses++;
+      vertexNanos += System.nanoTime() - start;
+    }
+  }
+
+  public static void prepareEnd(long start) {
+    if (start != 0) {
+      preparePasses++;
+      prepareNanos += System.nanoTime() - start;
+    }
+  }
+
+  public static void executeEnd(long start) {
+    if (start != 0) {
+      executePasses++;
+      executeNanos += System.nanoTime() - start;
+    }
   }
 
   public static String diagnostic() {
@@ -63,6 +92,18 @@ public final class ParticleWorkProbe {
         + "; pointQueriesTotal="
         + pointsTotal
         + "; visibleTotal="
-        + visibleTotal;
+        + visibleTotal
+        + "; vertexPassesTotal="
+        + vertexPasses
+        + "; vertexTotalMs="
+        + vertexNanos / 1e6
+        + "; preparePassesTotal="
+        + preparePasses
+        + "; prepareTotalMs="
+        + prepareNanos / 1e6
+        + "; executePassesTotal="
+        + executePasses
+        + "; executeTotalMs="
+        + executeNanos / 1e6;
   }
 }

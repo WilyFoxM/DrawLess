@@ -15,5 +15,6 @@ public class DisplayModelReloadMixin {
     ru.wilyfox.drawless.performance.NpcFrameCache.clear();
     ru.wilyfox.drawless.performance.ExtremeDisplayPerformance.clear();
     ru.wilyfox.drawless.performance.LiveDisplayGeometry.reload();
+    ru.wilyfox.drawless.performance.ParticleSpatialContext.clear();
   }
 }

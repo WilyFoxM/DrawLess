@@ -50,9 +50,9 @@
   "drawless.setting.model_budget": "Бюджет обновления",
   "drawless.setting.model_budget.description": "Бюджет CPU на кадр: от 100 до 5000 микросекунд. Большее значение разрешает больше работы по обновлению.",
   "drawless.setting.particle_light": "Кеш света частиц",
-  "drawless.setting.particle_light.description": "Экспериментально. Переиспользует освещение для одинаковых координат в одном проходе подготовки. По умолчанию выключено.",
+  "drawless.setting.particle_light.description": "Экспериментально. Переиспользует базовый свет и неизменяемые позиции. Тики и изменения мира/света сбрасывают результаты; с некоторыми модами свет переиспользуется только внутри прохода. По умолчанию выключено.",
   "drawless.setting.particle_collision": "Кеш пустых коллизий",
-  "drawless.setting.particle_collision.description": "Экспериментально. Пропускает проверки столкновений частиц только в подтверждённых воздушных объёмах. По умолчанию выключено.",
+  "drawless.setting.particle_collision.description": "Экспериментально. Пропускает столкновения в доказанно пустых объёмах, используя пустые секции чанков. Количество, движение и формы столкновений сохраняются. По умолчанию выключено.",
   "drawless.setting.npc_budget": "Бюджет поз NPC",
   "drawless.setting.npc_budget.description": "Экспериментально. Ограничивает обновление поз NPC и может снижать частоту обновления анимации.",
   "drawless.setting.npc_groups": "Группы NPC на кадр",
@@ -93,5 +93,6 @@
   "drawless.benchmark.reason.incomplete_phase": "в фазе мало образцов или есть прерванные кадры",
   "drawless.benchmark.reason.save_failed": "не удалось сохранить отчёт фазы",
   "drawless.benchmark.reason.timeout": "истекло время ожидания фазы",
-  "drawless.benchmark.reason.cancelled": "отменено"
+  "drawless.benchmark.reason.cancelled": "отменено",
+  "drawless.unavailable.particle_pipeline": "Этим конвейером управляет Particle Core или AsyncParticles. Сохранённая настройка DrawLess не меняется."
 }

@@ -11,6 +11,10 @@ import ru.wilyfox.drawless.compat.RenderModSupport;
 public final class DrawLessMixinPlugin implements IMixinConfigPlugin {
   @Override
   public boolean shouldApplyMixin(String target, String mixin) {
+    if (mixin.endsWith(".ParticleLightPublicationMixin"))
+      return RenderModSupport.TEMPORAL_PARTICLE_LIGHT;
+    if (mixin.endsWith(".ParticleLightCacheMixin") || mixin.endsWith(".ParticleCollisionMixin"))
+      return RenderModSupport.PARTICLE_CACHES;
     if (mixin.endsWith(".FeatureBatchingMixin")) {
       return !RenderModSupport.IMMEDIATELY_FAST && !RenderModSupport.IRIS;
     }
