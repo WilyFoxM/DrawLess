@@ -88,7 +88,10 @@ public final class ParticleCollisionCache {
       Level level,
       List<VoxelShape> extra,
       Operation<Vec3> original) {
-    if (!enabled || level != world || Thread.currentThread() != owner)
+    if (!enabled
+        || level != world
+        || Thread.currentThread() != owner
+        || !ParticleSpatialContext.owns(world))
       return original.call(context, movement, box, level, extra);
     queries++;
     if (extra.isEmpty() && emptyVolume(box, movement)) {

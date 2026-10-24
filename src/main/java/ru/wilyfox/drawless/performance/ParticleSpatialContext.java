@@ -112,6 +112,7 @@ public final class ParticleSpatialContext {
   public static void clear() {
     if (owner != null && Thread.currentThread() != owner) return;
     if (world == null) return;
+    ParticleCollisionCache.invalidate();
     world = null;
     Arrays.fill(CHUNKS, null);
     nextGeneration();
