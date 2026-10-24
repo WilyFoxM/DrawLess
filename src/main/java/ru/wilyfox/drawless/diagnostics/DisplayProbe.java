@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.Camera;
@@ -58,6 +59,8 @@ public final class DisplayProbe {
   }
 
   public static String start(Minecraft client, String label) {
+    if (BenchmarkSeries.running())
+      return Component.translatable("drawless.benchmark.busy").getString();
     if (saving)
       return "Previous DrawLess report is still saving. Wait before starting another probe.";
     if (active != null)
@@ -73,6 +76,40 @@ public final class DisplayProbe {
         + label
         + ": close chat and keep the camera still. 2s warmup + 20s recording; report saves automatically.";
   }
+
+  static boolean busy() {
+    return active != null || saving;
+  }
+
+  static boolean startAutomated(
+      Minecraft client,
+      String label,
+      Path directory,
+      String metadata,
+      Consumer<Result> completion) {
+    if (busy() || client.level == null || client.player == null) return false;
+    active = new Session(label, client);
+    active.directory = directory;
+    active.metadata = metadata;
+    active.completion = completion;
+    DisplayCostProbe.start();
+    return true;
+  }
+
+  static void cancelAutomated(Minecraft client) {
+    if (active != null && active.completion != null) finish(client, "cancelled");
+  }
+
+  record Result(
+      String label,
+      String reason,
+      Path path,
+      double fps,
+      long intervals,
+      double seconds,
+      int menuFrames,
+      int unfocusedFrames,
+      List<Sample> samples) {}
 
   public static String status() {
     return active != null
@@ -215,7 +252,7 @@ public final class DisplayProbe {
         report(
                 session.label,
                 reason,
-                session.context,
+                session.context + session.metadata,
                 fps,
                 session.menuFrames,
                 session.unfocusedFrames,
@@ -223,34 +260,61 @@ public final class DisplayProbe {
             + DisplayCostProbe.report();
     DisplayCostProbe.stop();
     Path output =
-        client
-            .gameDirectory
-            .toPath()
-            .resolve("drawless-reports")
-            .resolve("drawless-" + FILE_TIME.format(Instant.now()) + "-" + session.label + ".md");
+        session.directory.resolve(
+            "drawless-" + FILE_TIME.format(Instant.now()) + "-" + session.label + ".md");
+    Result result =
+        new Result(
+            session.label,
+            reason,
+            output,
+            fps,
+            session.frameIntervals,
+            session.frameIntervalNanos / 1e9,
+            session.menuFrames,
+            session.unfocusedFrames,
+            List.copyOf(session.samples));
     CompletableFuture.runAsync(
         () -> {
+          Result completed = result;
+          String failure = null;
           try {
             AtomicFileWriter.write(output, writer -> writer.write(markdown));
             lastSaved = output;
-            client.execute(
-                () ->
-                    message(
-                        client,
-                        String.format(
-                            Locale.ROOT,
-                            "%s finished (%s): %.1f FPS. Saved: %s",
-                            session.label,
-                            reason,
-                            fps,
-                            output)));
           } catch (Exception error) {
             ru.wilyfox.drawless.DrawLess.LOGGER.warn("Could not save display probe", error);
-            client.execute(
-                () -> message(client, "Could not save display probe: " + error.getMessage()));
+            failure = error.getMessage();
+            completed =
+                new Result(
+                    session.label,
+                    "save_failed",
+                    output,
+                    fps,
+                    result.intervals,
+                    result.seconds,
+                    result.menuFrames,
+                    result.unfocusedFrames,
+                    result.samples);
           } finally {
             saving = false;
           }
+          Result outcome = completed;
+          String errorText = failure;
+          client.execute(
+              () -> {
+                if (session.completion != null) session.completion.accept(outcome);
+                else
+                  message(
+                      client,
+                      outcome.reason.equals("save_failed")
+                          ? "Could not save display probe: " + errorText
+                          : String.format(
+                              Locale.ROOT,
+                              "%s finished (%s): %.1f FPS. Saved: %s",
+                              session.label,
+                              reason,
+                              fps,
+                              output));
+              });
         });
   }
 
@@ -378,10 +442,14 @@ public final class DisplayProbe {
     final List<Sample> samples = new ArrayList<>(24);
     long measurementStart, nextSampleAt, lastFrameAt, frameIntervals, frameIntervalNanos;
     int menuFrames, unfocusedFrames;
+    Path directory;
+    String metadata = "";
+    Consumer<Result> completion;
 
     Session(String label, Minecraft client) {
       this.label = label;
       this.level = client.level;
+      directory = client.gameDirectory.toPath().resolve("drawless-reports");
       var config = ru.wilyfox.drawless.config.DrawLessConfig.get();
       context =
           "Minecraft "

@@ -26,6 +26,12 @@ For the existing probe, each phase has 2 seconds of transition warmup followed b
 before the series and 10 seconds after each switch. These waits are conventions,
 not proof that JIT compilation, streaming or temperature have stabilized.
 
+Automatic series introduced in 1.1.0 development builds use the probe's 2-second
+transition warmup and 20-second measurement per phase. They do not add the earlier
+manual protocol's 60-second initial wait or extra 10-second settling waits. Warm
+the scene before arming a series and disclose which protocol was actually used.
+Automation controls switching and recording; it does not establish a stable scene.
+
 ## Available measurements
 
 The existing probe reports mean observed FPS from accumulated frame intervals.

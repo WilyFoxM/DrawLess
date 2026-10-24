@@ -26,6 +26,7 @@ public final class DrawLess implements ClientModInitializer {
     LiveDisplayGeometry.register();
     DisplayProbe.register();
     DisplayCostProbe.register();
+    BenchmarkSeries.register();
     SodiumBrushableBlockEntityCulling.registerIfAvailable();
     ClientCommandRegistrationCallback.EVENT.register(
         (dispatcher, access) ->
@@ -70,6 +71,14 @@ public final class DrawLess implements ClientModInitializer {
                                 ClientCommands.literal("start")
                                     .executes(
                                         context -> {
+                                          if (BenchmarkSeries.running()) {
+                                            context
+                                                .getSource()
+                                                .sendError(
+                                                    Component.translatable(
+                                                        "drawless.benchmark.busy"));
+                                            return 0;
+                                          }
                                           var metrics = RenderMetrics.getInstance();
                                           metrics.reset();
                                           metrics.start();
@@ -84,6 +93,14 @@ public final class DrawLess implements ClientModInitializer {
                                 ClientCommands.literal("stop")
                                     .executes(
                                         context -> {
+                                          if (BenchmarkSeries.running()) {
+                                            context
+                                                .getSource()
+                                                .sendError(
+                                                    Component.translatable(
+                                                        "drawless.benchmark.busy"));
+                                            return 0;
+                                          }
                                           var metrics = RenderMetrics.getInstance();
                                           metrics.stop();
                                           var text =
