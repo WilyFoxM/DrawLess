@@ -87,6 +87,7 @@
   "drawless.benchmark.reason.settings_opened": "открыты настройки",
   "drawless.benchmark.reason.screen_opened": "открылось меню или игра приостановлена",
   "drawless.benchmark.reason.focus_lost": "окно потеряло фокус",
+  "drawless.benchmark.reason.frame_throttled": "Minecraft включил ограничение частоты кадров",
   "drawless.benchmark.reason.camera_moved": "камера сдвинулась",
   "drawless.benchmark.reason.environment_changed": "изменились окно, видеонастройки, ресурс-паки или профилировщик",
   "drawless.benchmark.reason.probe_busy": "сборщик замеров занят",

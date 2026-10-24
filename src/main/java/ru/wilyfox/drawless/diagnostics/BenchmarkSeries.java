@@ -12,6 +12,7 @@ import java.util.concurrent.CompletableFuture;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.minecraft.client.InactivityFpsLimit;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.network.chat.Component;
@@ -123,6 +124,12 @@ public final class BenchmarkSeries {
         abort(client, "settings_changed");
         return;
       }
+      run.originalInactivity = client.options.inactivityFpsLimit().get();
+      client.options.inactivityFpsLimit().set(InactivityFpsLimit.MINIMIZED);
+      run.environmentWarnings.add(
+          "AFK frame throttling was temporarily disabled during this series; original inactivity policy: "
+              + run.originalInactivity.getSerializedName()
+              + ". The original policy was restored afterwards.");
       run.anchor = Anchor.capture(client);
       next(client, run);
       return;
@@ -135,6 +142,9 @@ public final class BenchmarkSeries {
     if (client.level != run.level || client.player == null) return "world_changed";
     if (client.gui.screen() != null || client.isPaused()) return "screen_opened";
     if (!client.getWindow().isFocused()) return "focus_lost";
+    if (client.getFramerateLimitTracker().getThrottleReason()
+        != com.mojang.blaze3d.platform.FramerateLimitTracker.FramerateThrottleReason.NONE)
+      return "frame_throttled";
     if (!run.expected.equals(DrawLessConfig.snapshot())) return "settings_changed";
     Anchor now = Anchor.capture(client);
     if (Math.abs(now.x - run.anchor.x) > 0.01
@@ -222,6 +232,7 @@ public final class BenchmarkSeries {
     if (run == null || run.reason != null) return;
     run.reason = reason;
     DrawLessConfig.restoreSnapshot(run.original);
+    restoreInactivity(client, run);
     client.gui.hud.setOverlayMessage(text("aborted", text("reason." + reason)), false);
     if (run.pending) DisplayProbe.cancelAutomated(client);
     else finish(client, run);
@@ -229,6 +240,7 @@ public final class BenchmarkSeries {
 
   private static void finish(Minecraft client, Run run) {
     DrawLessConfig.restoreSnapshot(run.original);
+    restoreInactivity(client, run);
     active = null;
     savingSummary = true;
     // Build immutable output on the client thread, then perform only file I/O in the worker.
@@ -270,6 +282,13 @@ public final class BenchmarkSeries {
         });
   }
 
+  private static void restoreInactivity(Minecraft client, Run run) {
+    if (run.originalInactivity != null) {
+      client.options.inactivityFpsLimit().set(run.originalInactivity);
+      run.originalInactivity = null;
+    }
+  }
+
   private static Component text(String id, Object... args) {
     return Component.translatable("drawless.benchmark." + id, args);
   }
@@ -291,6 +310,7 @@ public final class BenchmarkSeries {
     final long requestedAt = System.nanoTime();
     final List<DisplayProbe.Result> results = new ArrayList<>();
     final List<String> environmentWarnings = new ArrayList<>();
+    InactivityFpsLimit originalInactivity;
     int phase;
     boolean pending;
     String reason, expected;
@@ -336,6 +356,8 @@ public final class BenchmarkSeries {
               + client.options.framerateLimit().get()
               + "; vsync="
               + client.options.enableVsync().get()
+              + "; inactivityFpsLimit="
+              + client.options.inactivityFpsLimit().get().getSerializedName()
               + "; fov="
               + client.options.fov().get()
               + "; renderDistance="

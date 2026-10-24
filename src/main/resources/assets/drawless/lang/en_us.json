@@ -87,6 +87,7 @@
   "drawless.benchmark.reason.settings_opened": "settings opened",
   "drawless.benchmark.reason.screen_opened": "a screen was opened or the game paused",
   "drawless.benchmark.reason.focus_lost": "window lost focus",
+  "drawless.benchmark.reason.frame_throttled": "Minecraft activated a frame throttle",
   "drawless.benchmark.reason.camera_moved": "camera moved",
   "drawless.benchmark.reason.environment_changed": "window, video settings, resource packs or profiler changed",
   "drawless.benchmark.reason.probe_busy": "probe unavailable",
