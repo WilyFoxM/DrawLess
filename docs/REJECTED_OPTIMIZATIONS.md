@@ -121,7 +121,9 @@ The additional per-particle sample fields, adaptive selector and experimental ea
 invalidation strategy are absent from the final change. This decision does not
 reject the existing shared light cache, its published-light invalidation, or the
 separate block-state reuse and context-aware collision work in the same change.
-Both particle cache options remain experimental and OFF by default in that build.
+In the evaluated `1.1.0-dev.4` build, both particle cache options were experimental
+and OFF by default. Release 1.1.0 changes the defaults; see the
+[current settings and compatibility notes](../README.md#compatibility).
 
 Reconsider only with cheaper validity checks or a demonstrably different reuse
 opportunity. Measure the real transformed path at both low and high passes per
