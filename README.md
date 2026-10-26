@@ -75,4 +75,4 @@ for all phases, raw measurements, conditions and limitations.
   APIs are used by DrawLess's operation and method wrappers.
 - **fzzyhmstrs and Particle Core contributors** —
   [Particle Core's position and tick-light reuse approaches](https://github.com/fzzyhmstrs/pc/tree/4b821baae8ffb86b6c180fdf1235e8c2f0bbfd94/src/main/java/me/fzzyhmstrs/particle_core/mixins)
-  provided inspiration for DrawLess's particle position and light reuse.
+  provided inspiration for DrawLess's particle position, light reuse and collision work.

@@ -52,7 +52,7 @@
   "drawless.setting.particle_light": "Particle light cache",
   "drawless.setting.particle_light.description": "Experimental. Reuses base light and immutable positions. Light reuse is invalidated by ticks and world/light changes; some integrations use pass-local reuse. Off by default.",
   "drawless.setting.particle_collision": "Empty collision cache",
-  "drawless.setting.particle_collision.description": "Experimental. Skips collision work for proven air volumes, using whole-air chunk sections when possible. Count, movement and collision shapes are preserved. Off by default.",
+  "drawless.setting.particle_collision.description": "Experimental. Skips collision work for air or context-checked empty shapes, reusing block states within a tick. Count and movement are preserved. Off by default.",
   "drawless.setting.npc_budget": "NPC pose budget",
   "drawless.setting.npc_budget.description": "Experimental. Limits NPC pose refresh work and can reduce animation update frequency.",
   "drawless.setting.npc_groups": "NPC groups per frame",

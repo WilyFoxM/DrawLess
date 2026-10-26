@@ -13,13 +13,17 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.EntityCollisionContext;
+import net.minecraft.world.phys.shapes.PositionCollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
- * Proves an entire vanilla collision scan volume contains only air. Never caches resolved movement.
+ * Proves a vanilla collision scan volume is empty. Only context-independent empty proofs are
+ * retained; non-air shapes are queried for the current collision context. Never caches movement.
  */
 public final class ParticleCollisionCache {
   private static final int CAPACITY = 8192;
+  private static final Class<?> EMPTY_CONTEXT = CollisionContext.empty().getClass();
   private static final long[] KEYS = new long[CAPACITY];
   private static final int[] STAMPS = new int[CAPACITY], SIZES = new int[CAPACITY];
   private static final byte[] RESULTS = new byte[CAPACITY];
@@ -30,6 +34,7 @@ public final class ParticleCollisionCache {
   private static boolean enabled, lastEnabled;
   private static long queries, hits, skipped, fallback, blockReads, invalidations;
   private static long sectionChecks, airSections, sectionChecksTotal, airSectionsTotal;
+  private static long shapeChecks, shapeSkips, shapeChecksTotal, shapeSkipsTotal;
   private static long ticksTotal,
       queriesTotal,
       hitsTotal,
@@ -52,6 +57,7 @@ public final class ParticleCollisionCache {
     owner = enabled ? Thread.currentThread() : null;
     queries = hits = skipped = fallback = blockReads = invalidations = 0;
     sectionChecks = airSections = 0;
+    shapeChecks = shapeSkips = 0;
     if (enabled) nextGeneration();
   }
 
@@ -67,6 +73,8 @@ public final class ParticleCollisionCache {
       invalidationsTotal += invalidations;
       sectionChecksTotal += sectionChecks;
       airSectionsTotal += airSections;
+      shapeChecksTotal += shapeChecks;
+      shapeSkipsTotal += shapeSkips;
     }
     enabled = false;
     owner = null;
@@ -94,7 +102,13 @@ public final class ParticleCollisionCache {
         || !ParticleSpatialContext.owns(world))
       return original.call(context, movement, box, level, extra);
     queries++;
-    if (extra.isEmpty() && emptyVolume(box, movement)) {
+    if (context.getClass() != PositionCollisionContext.class
+        && context.getClass() != EntityCollisionContext.class
+        && context.getClass() != EMPTY_CONTEXT) {
+      fallback++;
+      return original.call(context, movement, box, level, extra);
+    }
+    if (extra.isEmpty() && emptyVolume(context, box, movement)) {
       skipped++;
       return movement;
     }
@@ -102,7 +116,7 @@ public final class ParticleCollisionCache {
     return original.call(context, movement, box, level, extra);
   }
 
-  private static boolean emptyVolume(AABB box, Vec3 movement) {
+  private static boolean emptyVolume(CollisionContext context, AABB box, Vec3 movement) {
     double minX = box.minX + Math.min(0, movement.x),
         minY = box.minY + Math.min(0, movement.y),
         minZ = box.minZ + Math.min(0, movement.z);
@@ -147,20 +161,29 @@ public final class ParticleCollisionCache {
       return RESULTS[slot] == 1;
     }
     int before = generation;
-    boolean clear = scanAir(x0, y0, z0, x1, y1, z1, (long) sx * sy * sz <= 64);
+    long readsBefore = ParticleSpatialContext.blockReads();
+    byte clear = scanEmpty(context, x0, y0, z0, x1, y1, z1, (long) sx * sy * sz <= 64);
+    blockReads += ParticleSpatialContext.blockReads() - readsBefore;
     if (before != generation) return false;
+    // The next query may have a different CollisionContext even for exactly the same volume.
+    if (clear == 3) {
+      shapeSkips++;
+      return true;
+    }
     STAMPS[slot] = generation;
     KEYS[slot] = key;
     SIZES[slot] = size;
-    RESULTS[slot] = (byte) (clear ? 1 : 2);
-    return clear;
+    RESULTS[slot] = clear;
+    return clear == 1;
   }
 
-  private static boolean scanAir(int x0, int y0, int z0, int x1, int y1, int z1, boolean small) {
+  private static byte scanEmpty(
+      CollisionContext context, int x0, int y0, int z0, int x1, int y1, int z1, boolean small) {
+    byte result = 1;
     for (int cx = x0 >> 4; cx <= x1 >> 4; cx++)
       for (int cz = z0 >> 4; cz <= z1 >> 4; cz++) {
         BlockGetter chunk = ParticleSpatialContext.chunk(world, cx, cz);
-        if (chunk == null) return false; // Never load chunks for this optimization.
+        if (chunk == null) return 2; // Never load chunks for this optimization.
         for (int cy = y0 >> 4; cy <= y1 >> 4; cy++) {
           if (chunk.getClass() == LevelChunk.class) {
             var levelChunk = (LevelChunk) chunk;
@@ -172,19 +195,30 @@ public final class ParticleCollisionCache {
               continue;
             }
           }
-          if (!small) return false;
+          if (!small) return 2;
           for (int x = Math.max(x0, cx << 4); x <= Math.min(x1, (cx << 4) + 15); x++)
             for (int z = Math.max(z0, cz << 4); z <= Math.min(z1, (cz << 4) + 15); z++)
               for (int y = Math.max(y0, cy << 4); y <= Math.min(y1, (cy << 4) + 15); y++) {
-                var state = chunk.getBlockState(POS.set(x, y, z));
-                blockReads++;
+                // Match vanilla BlockCollisions' boundary filtering before asking for shapes.
+                int edges =
+                    (x == x0 || x == x1 ? 1 : 0)
+                        + (y == y0 || y == y1 ? 1 : 0)
+                        + (z == z0 || z == z1 ? 1 : 0);
+                if (edges == 3) continue;
+                var state = ParticleSpatialContext.blockState(world, chunk, POS.set(x, y, z));
+                if ((edges == 1 && !state.hasLargeCollisionShape())
+                    || (edges == 2 && !state.is(Blocks.MOVING_PISTON))) continue;
                 if (!(state.is(Blocks.AIR)
                     || state.is(Blocks.CAVE_AIR)
-                    || state.is(Blocks.VOID_AIR))) return false;
+                    || state.is(Blocks.VOID_AIR))) {
+                  shapeChecks++;
+                  if (!context.getCollisionShape(state, world, POS).isEmpty()) return 2;
+                  result = 3;
+                }
               }
         }
       }
-    return true;
+    return result;
   }
 
   private static void nextGeneration() {
@@ -226,6 +260,10 @@ public final class ParticleCollisionCache {
         + "; sectionChecksTotal="
         + sectionChecksTotal
         + "; airSectionsTotal="
-        + airSectionsTotal;
+        + airSectionsTotal
+        + "; shapeChecksTotal="
+        + shapeChecksTotal
+        + "; shapeSkipsTotal="
+        + shapeSkipsTotal;
   }
 }
