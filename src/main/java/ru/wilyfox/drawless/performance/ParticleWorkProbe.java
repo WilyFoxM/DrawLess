@@ -7,6 +7,7 @@ import ru.wilyfox.drawless.diagnostics.DisplayProbe;
  */
 public final class ParticleWorkProbe {
   private static long ticks, frames, tickNanos, frameNanos;
+  private static long contextTicks, contextNanos;
   private static long points, visible, pointsTotal, visibleTotal;
   private static boolean frameCollecting;
   private static long vertexPasses,
@@ -41,6 +42,13 @@ public final class ParticleWorkProbe {
     if (start != 0) {
       tickNanos += System.nanoTime() - start;
       ticks++;
+    }
+  }
+
+  public static void contextEnd(long start) {
+    if (start != 0) {
+      contextNanos += System.nanoTime() - start;
+      contextTicks++;
     }
   }
 
@@ -104,6 +112,10 @@ public final class ParticleWorkProbe {
         + "; executePassesTotal="
         + executePasses
         + "; executeTotalMs="
-        + executeNanos / 1e6;
+        + executeNanos / 1e6
+        + "; contextTicksTotal="
+        + contextTicks
+        + "; contextTotalMs="
+        + contextNanos / 1e6;
   }
 }

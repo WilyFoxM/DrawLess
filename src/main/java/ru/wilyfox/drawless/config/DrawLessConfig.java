@@ -27,8 +27,8 @@ public final class DrawLessConfig {
   public boolean modelEngineNpcBudget = false;
   public int npcGroupsPerFrame = 2;
   public boolean adaptiveNpcBudget = true;
-  public boolean particleLightCache = false;
-  public boolean particleEmptyCollision = false;
+  public boolean particleLightCache = true;
+  public boolean particleEmptyCollision = true;
   public boolean debug = false;
 
   public static DrawLessConfig get() {

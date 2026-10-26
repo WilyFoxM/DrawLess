@@ -12,7 +12,8 @@ repeated rendering work while keeping movement, animation and lighting live.
 
 - Faster rendering of supported Item Display scenes through model and geometry reuse.
 - Batching of compatible draws, with OFF, LIMITED and EXPANDED modes.
-- Optional text/name-tag and particle optimizations, each with its own switch.
+- Particle lighting and empty-collision optimizations, enabled by default for new settings.
+- Optional text/name-tag buffer reuse; each optimization has its own switch.
 - A searchable settings menu with English and Russian translations.
 
 ## Getting started
@@ -36,11 +37,16 @@ DrawLess works standalone or with Sodium; Sodium **0.9.2** is the tested version
 With **ImmediatelyFast**, overlapping text and batching optimizations are disabled
 in DrawLess. With **Iris**, feature batching is disabled and Live geometry uses
 ordinary rendering. Unavailable controls explain why they cannot be changed.
+With **Particle Core** or **AsyncParticles**, DrawLess disables its overlapping
+particle caches. Iris and recognized dynamic-light integrations limit light reuse
+to the current rendering pass.
 
 **EXPANDED batching is enabled by default and can alter overlapping layers.**
 If text backgrounds or other layers look incorrect, select **LIMITED** or **OFF**
-under **Rendering → Feature batching**. Text reuse and particle caches are
-experimental and OFF by default. Keep **Live geometry** selected for normal play.
+under **Rendering → Feature batching**. Particle caches can be disabled
+independently under **Particles**. They default to ON for new
+settings; existing saved choices are preserved. Text reuse defaults to OFF.
+Keep **Live geometry** selected for normal play.
 
 ## Measured performance
 
@@ -51,7 +57,7 @@ One recorded scene measured **+34.53% mean paired FPS change**
 text reuse; particle caches were OFF. Tested on a
 Ryzen 5 5600H / RTX 3060 Laptop GPU. OFF controls varied by **12.03%**.
 
-This is a scene-specific result from one session, not a benchmark of **1.0.0**
+This is a scene-specific result from one session, not a benchmark of **1.1.0**
 or a version-to-version improvement. See the [full report](benchmarks/README.md)
 for all phases, raw measurements, conditions and limitations.
 
@@ -75,4 +81,4 @@ for all phases, raw measurements, conditions and limitations.
   APIs are used by DrawLess's operation and method wrappers.
 - **fzzyhmstrs and Particle Core contributors** —
   [Particle Core's position and tick-light reuse approaches](https://github.com/fzzyhmstrs/pc/tree/4b821baae8ffb86b6c180fdf1235e8c2f0bbfd94/src/main/java/me/fzzyhmstrs/particle_core/mixins)
-  provided inspiration for DrawLess's particle position and light reuse.
+  provided inspiration for DrawLess's particle position, light reuse and collision work.

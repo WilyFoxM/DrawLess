@@ -1,6 +1,6 @@
 # DrawLess benchmarks
 
-[Methodology](METHODOLOGY.md) · [0.1.0 correctness validation](VALIDATION_0.1.0.md)
+[Methodology](METHODOLOGY.md) · [0.1.0 correctness validation](VALIDATION_0.1.0.md) · [Rejected optimization experiments](../docs/REJECTED_OPTIMIZATIONS.md)
 
 Benchmark 02 is a development-build/selected-preset result. Benchmark 01 below remains the published 0.1.0/default-preset result. Neither is a direct comparison between versions.
 

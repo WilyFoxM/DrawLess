@@ -63,6 +63,7 @@ Desktop.ini
 !/benchmarks/README.md
 !/benchmarks/METHODOLOGY.md
 !/benchmarks/VALIDATION_0.1.0.md
+!/docs/REJECTED_OPTIMIZATIONS.md
 
 # Reporting tools and intermediate materials remain local.
 /tools/
