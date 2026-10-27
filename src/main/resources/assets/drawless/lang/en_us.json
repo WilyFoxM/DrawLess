@@ -104,5 +104,8 @@
   "drawless.player_profile.last": "Last player profile: %s",
   "drawless.player_profile.idle": "No player profile is active.",
   "drawless.player_profile.saved": "Player profile saved: %s",
-  "drawless.player_profile.save_failed": "Could not save player profile to %s. Check the log."
+  "drawless.player_profile.save_failed": "Could not save player profile to %s. Check the log.",
+  "drawless.page.players": "Players",
+  "drawless.setting.player_geometry": "Armor geometry reuse",
+  "drawless.setting.player_geometry.description": "Reuses transformed armor vertices between compatible passes in the same frame. Poses, lighting, tint and glint remain live. Development option, disabled by default."
 }

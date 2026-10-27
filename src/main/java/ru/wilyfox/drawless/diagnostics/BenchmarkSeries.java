@@ -28,6 +28,7 @@ public final class BenchmarkSeries {
     PARTICLE_LIGHT,
     PARTICLE_COLLISION,
     TEXT,
+    PLAYER_GEOMETRY,
     BATCHING;
 
     String id() {
@@ -46,6 +47,7 @@ public final class BenchmarkSeries {
         case PARTICLE_LIGHT -> c.particleLightCache = on;
         case PARTICLE_COLLISION -> c.particleEmptyCollision = on;
         case TEXT -> c.textBufferReuse = on;
+        case PLAYER_GEOMETRY -> c.playerGeometryReuse = on;
         case BATCHING -> c.featureBatching = on;
       }
     }

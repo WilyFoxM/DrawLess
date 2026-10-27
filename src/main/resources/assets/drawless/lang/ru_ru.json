@@ -104,5 +104,8 @@
   "drawless.player_profile.last": "Последний профиль игроков: %s",
   "drawless.player_profile.idle": "Профиль игроков не записывается.",
   "drawless.player_profile.saved": "Профиль игроков сохранён: %s",
-  "drawless.player_profile.save_failed": "Не удалось сохранить профиль игроков в %s. Проверь журнал."
+  "drawless.player_profile.save_failed": "Не удалось сохранить профиль игроков в %s. Проверь журнал.",
+  "drawless.page.players": "Игроки",
+  "drawless.setting.player_geometry": "Геометрия брони",
+  "drawless.setting.player_geometry.description": "Переиспользует преобразованные вершины брони между совместимыми проходами одного кадра. Позы, освещение, цвет и glint остаются текущими. Опция для проверки, по умолчанию выключена."
 }
