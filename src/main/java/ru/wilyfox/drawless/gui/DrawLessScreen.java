@@ -42,6 +42,8 @@ public final class DrawLessScreen extends Screen {
 
   public DrawLessScreen(Screen parent) {
     super(Component.literal("DrawLess"));
+    ru.wilyfox.drawless.diagnostics.PlayerProfile.finish(
+        net.minecraft.client.Minecraft.getInstance(), "settings_opened");
     ru.wilyfox.drawless.diagnostics.BenchmarkSeries.beforeSettings(
         net.minecraft.client.Minecraft.getInstance());
     this.parent = parent;

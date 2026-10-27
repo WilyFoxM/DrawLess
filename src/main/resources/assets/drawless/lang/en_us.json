@@ -95,5 +95,14 @@
   "drawless.benchmark.reason.save_failed": "phase report could not be saved",
   "drawless.benchmark.reason.timeout": "phase timed out",
   "drawless.benchmark.reason.cancelled": "cancelled",
-  "drawless.unavailable.particle_pipeline": "Particle Core or AsyncParticles manages this pipeline. Your saved DrawLess preference is preserved."
+  "drawless.unavailable.particle_pipeline": "Particle Core or AsyncParticles manages this pipeline. Your saved DrawLess preference is preserved.",
+  "drawless.player_profile.busy": "Another measurement or report is active. Wait for it to finish before starting a new recording.",
+  "drawless.player_profile.armed": "Player profile (%s) armed. Close chat: 2s warmup + 20s sampling. No optimization settings are changed.",
+  "drawless.player_profile.cancelled": "Player profile cancelled. Any partial recording is saved separately.",
+  "drawless.player_profile.active": "Player profile running: %s.",
+  "drawless.player_profile.saving": "Player profile is saving.",
+  "drawless.player_profile.last": "Last player profile: %s",
+  "drawless.player_profile.idle": "No player profile is active.",
+  "drawless.player_profile.saved": "Player profile saved: %s",
+  "drawless.player_profile.save_failed": "Could not save player profile to %s. Check the log."
 }

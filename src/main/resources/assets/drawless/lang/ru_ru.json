@@ -95,5 +95,14 @@
   "drawless.benchmark.reason.save_failed": "не удалось сохранить отчёт фазы",
   "drawless.benchmark.reason.timeout": "истекло время ожидания фазы",
   "drawless.benchmark.reason.cancelled": "отменено",
-  "drawless.unavailable.particle_pipeline": "Этим конвейером управляет Particle Core или AsyncParticles. Сохранённая настройка DrawLess не меняется."
+  "drawless.unavailable.particle_pipeline": "Этим конвейером управляет Particle Core или AsyncParticles. Сохранённая настройка DrawLess не меняется.",
+  "drawless.player_profile.busy": "Уже выполняется замер или сохранение отчёта. Дождись завершения перед новой записью.",
+  "drawless.player_profile.armed": "Профиль игроков (%s) готов. Закрой чат: 2с прогрева + 20с выборочной записи. Настройки оптимизаций не меняются.",
+  "drawless.player_profile.cancelled": "Профиль игроков отменён. Неполная запись сохраняется отдельно.",
+  "drawless.player_profile.active": "Записывается профиль игроков: %s.",
+  "drawless.player_profile.saving": "Профиль игроков сохраняется.",
+  "drawless.player_profile.last": "Последний профиль игроков: %s",
+  "drawless.player_profile.idle": "Профиль игроков не записывается.",
+  "drawless.player_profile.saved": "Профиль игроков сохранён: %s",
+  "drawless.player_profile.save_failed": "Не удалось сохранить профиль игроков в %s. Проверь журнал."
 }

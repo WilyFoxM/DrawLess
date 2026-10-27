@@ -28,6 +28,7 @@ public final class DrawLess implements ClientModInitializer {
     DisplayProbe.register();
     DisplayCostProbe.register();
     BenchmarkSeries.register();
+    PlayerProfile.register();
     SodiumBrushableBlockEntityCulling.registerIfAvailable();
     ClientCommandRegistrationCallback.EVENT.register(
         (dispatcher, access) ->
@@ -72,12 +73,12 @@ public final class DrawLess implements ClientModInitializer {
                                 ClientCommands.literal("start")
                                     .executes(
                                         context -> {
-                                          if (BenchmarkSeries.running()) {
+                                          if (BenchmarkSeries.running() || PlayerProfile.busy()) {
                                             context
                                                 .getSource()
                                                 .sendError(
                                                     Component.translatable(
-                                                        "drawless.benchmark.busy"));
+                                                        "drawless.player_profile.busy"));
                                             return 0;
                                           }
                                           var metrics = RenderMetrics.getInstance();
@@ -94,12 +95,12 @@ public final class DrawLess implements ClientModInitializer {
                                 ClientCommands.literal("stop")
                                     .executes(
                                         context -> {
-                                          if (BenchmarkSeries.running()) {
+                                          if (BenchmarkSeries.running() || PlayerProfile.busy()) {
                                             context
                                                 .getSource()
                                                 .sendError(
                                                     Component.translatable(
-                                                        "drawless.benchmark.busy"));
+                                                        "drawless.player_profile.busy"));
                                             return 0;
                                           }
                                           var metrics = RenderMetrics.getInstance();
