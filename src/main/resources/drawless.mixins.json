@@ -4,6 +4,13 @@
   "compatibilityLevel": "JAVA_25",
   "plugin": "ru.wilyfox.drawless.mixin.DrawLessMixinPlugin",
   "client": [
+    "PlayerGeometryPoseAccessor",
+    "PlayerGeometryCubeMixin",
+    "PlayerGeometryModelMixin",
+    "PlayerGeometrySubmitMixin",
+    "PlayerGeometryArmorMixin",
+    "PlayerGeometryAvatarMixin",
+    "PlayerGeometryStateMixin",
     "PlayerProfileFrameMixin",
     "PlayerProfileGameMixin",
     "PlayerProfileAvatarMixin",
