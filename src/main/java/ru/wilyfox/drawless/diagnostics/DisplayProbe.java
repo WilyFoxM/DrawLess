@@ -59,6 +59,8 @@ public final class DisplayProbe {
   }
 
   public static String start(Minecraft client, String label) {
+    if (PlayerProfile.busy())
+      return Component.translatable("drawless.player_profile.busy").getString();
     if (BenchmarkSeries.running())
       return Component.translatable("drawless.benchmark.busy").getString();
     if (saving)
@@ -87,7 +89,8 @@ public final class DisplayProbe {
       Path directory,
       String metadata,
       Consumer<Result> completion) {
-    if (busy() || client.level == null || client.player == null) return false;
+    if (busy() || PlayerProfile.busy() || client.level == null || client.player == null)
+      return false;
     active = new Session(label, client);
     active.directory = directory;
     active.metadata = metadata;
