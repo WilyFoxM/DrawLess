@@ -6,6 +6,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import java.util.List;
 import net.minecraft.client.renderer.StagedVertexBuffer;
 import net.minecraft.client.renderer.feature.FeatureFrameContext;
+import net.minecraft.client.renderer.feature.NameTagFeatureRenderer;
 import net.minecraft.client.renderer.feature.RenderTypeFeatureRenderer;
 import net.minecraft.client.renderer.rendertype.PreparedRenderType;
 import org.spongepowered.asm.mixin.Final;
@@ -27,6 +28,10 @@ public class PlayerProfileFeatureMixin {
             : 0;
     try {
       original.call(context, submits, outline);
+      // A text lookup cache can bypass Group.getVertexBuilder for later actors.
+      if (PlayerProfile.stages()
+          && (Object) this instanceof NameTagFeatureRenderer
+          && !groups.isEmpty()) PlayerProfile.nameTagGroup(groups.getLast(), submits);
     } finally {
       PlayerProfile.end(token);
     }
@@ -68,7 +73,10 @@ public class PlayerProfileFeatureMixin {
       PreparedRenderType type, StagedVertexBuffer.ExecuteInfo info, Operation<Void> original) {
     String kind = PlayerProfile.stages() ? PlayerProfile.executionKind() : null;
     long token = kind == null ? 0 : PlayerProfile.begin("draw_cpu/" + kind);
-    if (kind != null) PlayerProfile.count("draw_submissions/" + kind, 1);
+    if (kind != null) {
+      PlayerProfile.count("draw_submissions/" + kind, 1);
+      PlayerProfile.count("feature_draw_submissions/" + getClass().getSimpleName() + "/" + kind, 1);
+    }
     try {
       original.call(type, info);
     } finally {

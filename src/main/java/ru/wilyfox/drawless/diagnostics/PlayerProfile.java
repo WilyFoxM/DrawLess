@@ -301,8 +301,20 @@ public final class PlayerProfile {
 
   public static void groupUse(Object group) {
     if (!collecting() || session.mode == Mode.CONTROL) return;
+    groupOrigins(group, attributed() ? 1 : 2);
+  }
+
+  /** Cached text consumers may emit glyphs without asking the group for a buffer again. */
+  public static void nameTagGroup(Object group, List<?> submits) {
+    if (!stages()) return;
+    int origins = 0;
+    for (Object submit : submits) origins |= session.submits.containsKey(submit) ? 1 : 2;
+    if (origins != 0) groupOrigins(group, origins);
+  }
+
+  private static void groupOrigins(Object group, int origins) {
     if (session.groups.size() < MAX_TAGS || session.groups.containsKey(group))
-      session.groups.merge(group, attributed() ? 1 : 2, (a, b) -> a | b);
+      session.groups.merge(group, origins, (a, b) -> a | b);
     else count("group_tag_limit", 1);
   }
 
@@ -348,7 +360,8 @@ public final class PlayerProfile {
     boolean matched =
         !s.frames.isEmpty()
             && s.frames.stream().allMatch(f -> ((Number) f.get("interval_ns")).longValue() > 0);
-    data.put("schema_version", 1);
+    data.put("schema_version", 2);
+    data.put("coverage_revision", "scene-stages-and-player-name-tags");
     data.put("result", reason);
     data.put("label", s.label);
     data.put("mode", s.mode.name().toLowerCase(Locale.ROOT));
@@ -428,6 +441,10 @@ public final class PlayerProfile {
         + c.options.framerateLimit().get()
         + "; camera="
         + c.options.getCameraType()
+        + "; renderDistance="
+        + c.options.getEffectiveRenderDistance()
+        + "; fov="
+        + c.options.fov().get()
         + "; resourcePacks="
         + c.options.resourcePacks;
   }

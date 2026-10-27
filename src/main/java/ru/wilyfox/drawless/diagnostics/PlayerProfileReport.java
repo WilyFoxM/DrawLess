@@ -20,7 +20,9 @@ public final class PlayerProfileReport {
             "Inclusive parents contain their children. Self time removes measured child spans only; unknown work and observer overhead remain.",
             "Frame-interval percentages use the sum of matched start-to-next-start intervals for sampled frames; render-frame percentages use the renderFrame method's measured elapsed time.",
             "Shared uploads cover all staged features. Mixed groups are not apportioned to players. Actual draw submissions are CPU calls, not GPU elapsed time.",
-            "Player attribution follows tagged model/item submits. Deferred name-tag/text, shadow, leash and custom bypass paths are not individually attributed.",
+            "Player attribution follows tagged model/item/name-tag submits. Name-tag layout and glyph emission are measured separately; shared or mixed name-tag draws are not apportioned. Other text, shadow, leash and custom bypass paths are not individually attributed.",
+            "Name-tag groups combine submit provenance with observed buffer use, including text-cache hits. Unknown-origin submits prevent a player-only classification even if they emit no glyphs.",
+            "World/GUI extraction, terrain preparation, frame-graph passes and feature phases are CPU scopes for the whole scene. Missing or bypassed hooks remain in parent self time; pass labels do not identify separate views or GPU execution.",
             "Glint classification uses render-type naming, not shader inspection. Repeated model/state identity is an opportunity counter, not proof that mutable poses or geometry can be reused.",
             "Deep cube/part hooks describe the vanilla ModelPart path; custom mesh/vertex formats may bypass it. Cube vertex counts are topology counts, not uploaded bytes or visible pixels.",
             "Measured bookkeeping is a partial observer-cost indicator; clock, call-chain, JIT and allocation effects are not fully isolated or subtracted. Compare control, stages and deep under the same scene.",
@@ -51,6 +53,12 @@ public final class PlayerProfileReport {
     text.append("Environment: `").append(data.get("environment_start")).append("`\n\n");
     text.append(
         "CPU timing includes profiling overhead. Percentages describe measured scopes, not a predicted FPS gain.\n\n");
+    text.append("Coverage: `")
+        .append(data.get("coverage_revision"))
+        .append("`; schema: ")
+        .append(data.get("schema_version"))
+        .append(
+            ". World, terrain, frame-pass and GUI scopes cover the whole scene. Player name-tag layout/glyph scopes are attributed separately; mixed draws remain shared.\n\n");
     for (String warning : warnings) text.append("- Review: ").append(warning).append('\n');
     var stages = (List<Map<String, Object>>) data.get("stages");
     text.append(
