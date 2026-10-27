@@ -71,7 +71,6 @@ public final class PlayerGeometryReuse {
       frames++;
       if (enabled) enabledFrames++;
       timing = measuring && frames % 20 == 1;
-      if (timing) timedFrames++;
     }
   }
 
@@ -85,6 +84,7 @@ public final class PlayerGeometryReuse {
     prepareState = null;
     owner = null;
     if (started != 0) maintenanceNanos += System.nanoTime() - started;
+    if (timing) timedFrames++;
   }
 
   public static void invalidate() {
