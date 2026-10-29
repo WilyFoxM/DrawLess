@@ -187,8 +187,7 @@ public final class DisplayProbe {
                 ru.wilyfox.drawless.performance.ParticleLightCache.diagnostic(),
                 ru.wilyfox.drawless.performance.ParticleCollisionCache.diagnostic(),
                 ru.wilyfox.drawless.performance.ParticleWorkProbe.diagnostic(),
-                client.particleEngine.countParticles(),
-                ru.wilyfox.drawless.performance.PlayerGeometryReuse.diagnostic()));
+                client.particleEngine.countParticles()));
       }
     }
     if (now - session.measurementStart >= DURATION) finish(client, "complete");
@@ -428,11 +427,6 @@ public final class DisplayProbe {
               sample.seconds,
               sample.particlePopulation,
               sample.particleWork));
-    out.append(
-        "\n## Player armor geometry by sample\n\nResource-local unique cube positions and frame-local transformed results; resource topology is checked before reuse. Lighting, tint, overlay and destination UV/glint processing remain current. Difference cumulative counters between samples. Operation counters cover all active frames; CPU timings sample one frame in 20 and use timedFramesTotal deltas, not framesTotal. timedModelPassesTotal/timedCubeCallsTotal/timedHitsTotal describe that timing sample. lookup includes topology validation; transform measures unique-position/face-normal preparation on misses; emit measures destination emission on both misses and hits; ordinary includes OFF/fallback cube encoding. These are sampled CPU-thread elapsed measurements with clock overhead, not GPU time or isolated net savings. Sampling lowers observer cost during the FPS comparison but does not eliminate it. vertexPayloadBytes counts pooled float arrays only; object, matrix and table overhead is excluded. Frame references are cleared after rendering; pooled payloads are retained within 4096 frame entries and an 8 MiB payload limit, topology snapshots within 512 entries, and released on disable/world/resource changes.\n\n| s | Player geometry |\n| ---: | --- |\n");
-    for (var sample : samples)
-      out.append(
-          String.format(Locale.ROOT, "| %.2f | %s |\n", sample.seconds, sample.playerGeometry));
     if (!samples.isEmpty())
       out.append("\n## NPC group membership (last sample, top 16)\n\n")
           .append(samples.getLast().npcGroups);
@@ -482,8 +476,6 @@ public final class DisplayProbe {
               + config.enabled
               + "; text buffer reuse "
               + config.textBufferReuse
-              + "; player geometry reuse "
-              + config.playerGeometryReuse
               + "; text buffer reuse effective "
               + (config.enabled
                   && config.textBufferReuse
@@ -581,6 +573,5 @@ public final class DisplayProbe {
       String particles,
       String particleCollision,
       String particleWork,
-      String particlePopulation,
-      String playerGeometry) {}
+      String particlePopulation) {}
 }

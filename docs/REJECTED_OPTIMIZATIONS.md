@@ -130,3 +130,54 @@ opportunity. Measure the real transformed path at both low and high passes per
 tick, repeat across JVM runs, include retained memory and allocations, exercise
 world/light/tick invalidation, and then confirm the effect in a controlled game
 scene. A fast simplified lookup or a large hit count alone is insufficient.
+
+## Frame-local player armor vertex reuse — rejected during 1.2.0-dev.3 development
+
+**Decision recorded 2026-10-29:** remove the prototype from the
+[player rendering change](https://github.com/WilyFoxM/DrawLess/pull/13). The
+evaluated implementation is preserved in
+[commit d827697](https://github.com/WilyFoxM/DrawLess/commit/d827697d18ce8a56dd4c7923b97021dee17d7bc5).
+
+### Approach
+
+Player armor submits the same model and pose for its base material and its glint.
+The prototype stored each armor cube's topology once per resource set (unique
+corners, UVs and normals) and, within one frame, the corners transformed by an exact
+pose and normal matrix. A second request for the same cube and matrices reused the
+transformed corners instead of recomputing them. Animation, light, tint, overlay,
+sprite coordinates and the glint material stayed live; every vertex was still
+written to the destination `VertexConsumer`. The cache had fixed topology, entry and
+payload limits and released its data on frame end, reload, world change and disable.
+
+### Evidence and cost
+
+Local native-client checks with and without Sodium 0.9.2 and ImmediatelyFast 1.16.5
+compared vertex positions, normals and UVs bit for bit, including non-uniform scale,
+A/B/A poses, dynamic light, tint, overlay and four armor slots with glint. Those
+checks passed, but the same fixtures already recorded more armor CPU time with the
+option enabled.
+
+A bracketed OFF/ON/OFF game recording on a server scene (Sodium 0.9.2, 14–19 visible
+players, fixed camera, 20 seconds per phase) toggled only this option. Armor CPU time
+was sampled in one frame out of twenty:
+
+| Phase | Mean FPS | Armor cube calls / sampled frame | CPU, ms / sampled frame | CPU, µs / cube call |
+| --- | ---: | ---: | ---: | ---: |
+| OFF | 195.12 | 196.0 | 0.0515 | 0.262 |
+| ON | 194.19 | 210.6 | 0.1266 | 0.601 |
+| OFF | 195.40 | 197.9 | 0.0518 | 0.262 |
+
+53.4% of requests reused transformed corners, with no unsupported or capacity
+fallbacks. Reuse avoided only the corner transform, which accounted for about
+0.007 ms per sampled frame. Writing the vertices again through the generic consumer
+took 0.081 ms, more than the entire ordinary path, and lookup added another 0.037 ms.
+The FPS difference of −0.55% comes from one bracket with a changing player population;
+it is neither an established regression nor evidence of a gain.
+
+### Outcome and reconsideration
+
+The prototype, its setting and its benchmark target were removed. Armor rendering
+uses the ordinary path. This decision applies to reusing transformed vertices while
+still re-emitting them; it does not reject player rendering optimizations that avoid
+vertex emission, such as retained geometry or merged submissions, which require a
+separate design and validation.

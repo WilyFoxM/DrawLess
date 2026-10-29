@@ -17,15 +17,10 @@ public class PlayerProfileFrameMixin {
     long token = PlayerProfile.frameBegin((Minecraft) (Object) this);
     boolean success = false;
     try {
-      ru.wilyfox.drawless.performance.PlayerGeometryReuse.beginFrame((Minecraft) (Object) this);
       original.call(render);
       success = true;
     } finally {
-      try {
-        ru.wilyfox.drawless.performance.PlayerGeometryReuse.endFrame();
-      } finally {
-        PlayerProfile.frameEnd(token, success);
-      }
+      PlayerProfile.frameEnd(token, success);
     }
   }
 
