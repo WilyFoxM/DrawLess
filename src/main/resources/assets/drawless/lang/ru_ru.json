@@ -104,5 +104,8 @@
   "drawless.player_profile.last": "Последний профиль игроков: %s",
   "drawless.player_profile.idle": "Профиль игроков не записывается.",
   "drawless.player_profile.saved": "Профиль игроков сохранён: %s",
-  "drawless.player_profile.save_failed": "Не удалось сохранить профиль игроков в %s. Проверь журнал."
+  "drawless.player_profile.save_failed": "Не удалось сохранить профиль игроков в %s. Проверь журнал.",
+  "drawless.page.players": "Игроки",
+  "drawless.setting.player_armor_geometry": "Броня на GPU",
+  "drawless.setting.player_armor_geometry.description": "Хранит меши брони игроков на видеокарте и каждый кадр передаёт только позы частей, освещение и цвет. Основа, отделка и зачарование одного предмета всегда идут одним путём; неподдержанная броня рисуется обычно. Экспериментально, по умолчанию выключено."
 }

@@ -187,7 +187,8 @@ public final class DisplayProbe {
                 ru.wilyfox.drawless.performance.ParticleLightCache.diagnostic(),
                 ru.wilyfox.drawless.performance.ParticleCollisionCache.diagnostic(),
                 ru.wilyfox.drawless.performance.ParticleWorkProbe.diagnostic(),
-                client.particleEngine.countParticles()));
+                client.particleEngine.countParticles(),
+                ru.wilyfox.drawless.performance.PlayerArmorGeometry.diagnostic()));
       }
     }
     if (now - session.measurementStart >= DURATION) finish(client, "complete");
@@ -427,6 +428,10 @@ public final class DisplayProbe {
               sample.seconds,
               sample.particlePopulation,
               sample.particleWork));
+    out.append(
+        "\n## Retained player armor geometry by sample\n\nArmor model-part meshes are retained on the GPU for their resource lifetime; each frame streams one 128-byte instance per captured part (pose, normal bases, tint, light, overlay). Per-frame fields describe the last level render before the sample; *Total fields are cumulative, so difference them between samples. A piece is one equipment renderLayers call; base, glint and trim submits of a piece are captured together or all replayed through the ordinary path (fallback reasons count pieces). capture includes animation setup and the part traversal at submit time; upload includes new mesh vertices, index rebuilds and instance writes; drawCpu is CPU time to record the retained draws. These are CPU-thread elapsed times measured every active frame, not GPU time. Vanilla armor preparation and execution that no longer occur are not counted here; compare player profiles or bracketed FPS for net effect.\n\n| s | Player armor |\n| ---: | --- |\n");
+    for (var sample : samples)
+      out.append(String.format(Locale.ROOT, "| %.2f | %s |\n", sample.seconds, sample.playerArmor));
     if (!samples.isEmpty())
       out.append("\n## NPC group membership (last sample, top 16)\n\n")
           .append(samples.getLast().npcGroups);
@@ -480,6 +485,8 @@ public final class DisplayProbe {
               + (config.enabled
                   && config.textBufferReuse
                   && !ru.wilyfox.drawless.compat.RenderModSupport.IMMEDIATELY_FAST)
+              + "; player armor geometry "
+              + config.playerArmorGeometry
               + "; feature batching "
               + config.featureBatching
               + "; feature batching effective "
@@ -573,5 +580,6 @@ public final class DisplayProbe {
       String particles,
       String particleCollision,
       String particleWork,
-      String particlePopulation) {}
+      String particlePopulation,
+      String playerArmor) {}
 }

@@ -82,6 +82,7 @@ final class BenchmarkReport {
       populationWarning(runs, warnings, true);
       populationWarning(runs, warnings, false);
       particlePopulationWarning(runs, warnings, target.startsWith("particle"));
+      if (target.equals("player_armor")) playerArmorWarning(runs, warnings);
       json.addProperty(
           "mean_paired_change_percent",
           pairs.stream()
@@ -213,5 +214,43 @@ final class BenchmarkReport {
               + "–"
               + totals.getMax()
               + ". Review particle workload comparability.");
+  }
+
+  static void playerArmorWarning(List<DisplayProbe.Result> runs, List<String> warnings) {
+    for (int i = 1; i < runs.size(); i += 2) {
+      var samples = runs.get(i).samples();
+      long pieces = armorDelta(samples, "piecesTotal");
+      long fallback = armorDelta(samples, "fallbackPiecesTotal");
+      if (pieces < 0 || fallback < 0) {
+        warnings.add(
+            "Retained armor counters could not be compared for "
+                + runs.get(i).label()
+                + ". Inspect the raw samples.");
+      } else if (pieces == 0) {
+        warnings.add(
+            "No player armor pieces were rendered in "
+                + runs.get(i).label()
+                + ". This scene cannot demonstrate retained armor geometry.");
+      } else if (fallback == pieces) {
+        warnings.add(
+            "Every player armor piece used the ordinary path in "
+                + runs.get(i).label()
+                + ". Review the fallback reasons before attributing an FPS change to retained armor.");
+      }
+    }
+  }
+
+  private static long armorDelta(List<DisplayProbe.Sample> samples, String key) {
+    if (samples.size() < 2) return -1;
+    var pattern = java.util.regex.Pattern.compile("(?:^|; )" + key + "=(\\d+)(?:;|$)");
+    var first = pattern.matcher(samples.getFirst().playerArmor());
+    var last = pattern.matcher(samples.getLast().playerArmor());
+    if (!first.find() || !last.find()) return -1;
+    try {
+      long a = Long.parseLong(first.group(1)), b = Long.parseLong(last.group(1));
+      return b >= a ? b - a : -1;
+    } catch (NumberFormatException ignored) {
+      return -1;
+    }
   }
 }
