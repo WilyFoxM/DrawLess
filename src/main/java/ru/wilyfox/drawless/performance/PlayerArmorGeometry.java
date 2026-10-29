@@ -8,13 +8,17 @@ import com.mojang.blaze3d.IndexType;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.pipeline.BindGroupLayout;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.GpuSampler;
+import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
@@ -33,7 +37,9 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.texture.SimpleTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.renderer.texture.TextureContents;
 import net.minecraft.resources.Identifier;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
@@ -57,6 +63,11 @@ import ru.wilyfox.drawless.mixin.ModelPartCubesAccessor;
  */
 public final class PlayerArmorGeometry {
   private static final int MAX_MESH_VERTICES = 1 << 18, MAX_PARTS = 2048;
+  private static final int ATLAS_SIZE = 1024, PIECE_HEADROOM = 128;
+
+  /** Batch key of the shared base-armor atlas; every other batch is keyed by its RenderType. */
+  private static final Object ATLAS = new Object();
+
   private static final Identifier ARMOR_VERTEX =
       Identifier.fromNamespaceAndPath("drawless", "core/live_armor");
   private static final Identifier GLINT_VERTEX =
@@ -79,8 +90,10 @@ public final class PlayerArmorGeometry {
   private static final IdentityHashMap<ModelPart, PartMeshes> parts = new IdentityHashMap<>();
   private static final IdentityHashMap<RenderPipeline, RenderPipeline> pipelines =
       new IdentityHashMap<>();
-  private static final IdentityHashMap<RenderType, ArrayList<Batch>> batches =
+  private static final IdentityHashMap<Object, ArrayList<Batch>> batches = new IdentityHashMap<>();
+  private static final IdentityHashMap<RenderType, Identifier> armorTextures =
       new IdentityHashMap<>();
+  private static final IdentityHashMap<RenderType, AtlasSlot> slots = new IdentityHashMap<>();
   private static final ArrayList<Batch> active = new ArrayList<>();
   private static final ArrayList<Pending> pending = new ArrayList<>();
   private static final ArrayList<Batch> touched = new ArrayList<>();
@@ -93,17 +106,21 @@ public final class PlayerArmorGeometry {
   private static String blocked = "off";
   private static ByteBuffer geometryData;
   private static GpuBuffer geometryBuffer;
-  private static int vertices, uploadedVertices, maxVertices, pendingCount, order, batchSequence;
+  private static int vertices, uploadedVertices, maxVertices, pendingCount, batchSequence;
+  private static GpuTexture atlas;
+  private static GpuTextureView atlasView;
+  private static GpuSampler atlasSampler;
+  private static int shelfX, shelfY, shelfHeight, atlasTextures;
   private static int frameInstances, frameSubmits, framePieces, frameFallbackPieces, frameDraws;
   private static Batch captureBatch, templateBatch;
   private static Model<?> templateModel;
   private static Object templateState;
-  private static TextureAtlasSprite templateSprite;
+  private static Object templateUv;
   private static final Matrix4f templatePose = new Matrix4f();
   private static int templateStart, templateEnd, frameReplicated;
   private static long replicatedTotal;
   private static PoseStack capturePose = new PoseStack();
-  private static TextureAtlasSprite captureSprite;
+  private static Object captureUv;
   private static long meshBuilds, indexRebuilds, geometryUploadedBytes, instanceUploadedBytes;
   private static long framesTotal, piecesTotal, fallbackPiecesTotal, submitsTotal, instancesTotal;
   private static long drawsTotal, captureNanosTotal, uploadNanosTotal, drawNanosTotal;
@@ -128,6 +145,7 @@ public final class PlayerArmorGeometry {
   public static void reload() {
     clear();
     pipelines.clear();
+    armorTextures.clear();
   }
 
   public static void clear() {
@@ -135,7 +153,14 @@ public final class PlayerArmorGeometry {
     batches.clear();
     active.clear();
     parts.clear();
+    slots.clear();
     releasePiece();
+    if (atlasView != null) atlasView.close();
+    if (atlas != null) atlas.close();
+    atlasView = null;
+    atlas = null;
+    atlasSampler = null;
+    shelfX = shelfY = shelfHeight = atlasTextures = 0;
     if (geometryBuffer != null) {
       geometryBuffer.close();
       geometryBuffer = null;
@@ -214,7 +239,6 @@ public final class PlayerArmorGeometry {
     if (!levelSubmit || inPiece) return;
     inPiece = true;
     pieceFailed = false;
-    order = 0;
     pendingCount = 0;
   }
 
@@ -244,11 +268,12 @@ public final class PlayerArmorGeometry {
     templateBatch = null;
     templateModel = null;
     templateState = null;
-    templateSprite = null;
+    templateUv = null;
   }
 
-  public static void order(int value) {
-    if (inPiece) order = value;
+  /** The base armor RenderType memoizes its texture; keep the mapping for atlas admission. */
+  public static void armorTexture(RenderType type, Identifier texture) {
+    if (armorTextures.size() < 1024) armorTextures.putIfAbsent(type, texture);
   }
 
   @SuppressWarnings({"rawtypes", "unchecked"})
@@ -326,7 +351,22 @@ public final class PlayerArmorGeometry {
       int overlay,
       int color,
       TextureAtlasSprite sprite) {
-    var batch = batch(type, order);
+    // Base and overlay layers share one atlas batch; trims keep their sprite sheet; blended glint
+    // draws after every solid member, like vanilla's translucent model phase.
+    Object uv;
+    Batch batch;
+    if (type.hasBlending()) {
+      uv = null;
+      batch = batch(type, type, 2);
+    } else if (sprite != null) {
+      uv = sprite;
+      batch = batch(type, type, 1);
+    } else {
+      var slot = slot(type);
+      if (slot == null) return Reason.TEXTURE;
+      uv = slot;
+      batch = batch(ATLAS, type, 0);
+    }
     if (batch == null) return Reason.CAPACITY;
     if (!touched.contains(batch)) {
       batch.pieceStart = batch.used;
@@ -336,11 +376,11 @@ public final class PlayerArmorGeometry {
         && model == templateModel
         && state == templateState
         && templatePose.equals(pose.last().pose()))
-      return replicate(batch, light, overlay, color, sprite);
+      return replicate(batch, light, overlay, color, uv);
     int start = batch.used;
     captureBatch = batch;
     // Vanilla preparation would wrap the consumer with this sprite; meshes bake the same UVs.
-    captureSprite = sprite;
+    captureUv = uv;
     raw = partFailed = false;
     try {
       model.setupAnim(state);
@@ -353,7 +393,7 @@ public final class PlayerArmorGeometry {
       return Reason.ERROR;
     } finally {
       captureBatch = null;
-      captureSprite = null;
+      captureUv = null;
     }
     if (raw) return Reason.RAW;
     if (partFailed) return Reason.MESH;
@@ -363,7 +403,7 @@ public final class PlayerArmorGeometry {
       templateEnd = batch.used;
       templateModel = model;
       templateState = state;
-      templateSprite = sprite;
+      templateUv = uv;
       templatePose.set(pose.last().pose());
     }
     return Reason.READY;
@@ -374,17 +414,16 @@ public final class PlayerArmorGeometry {
    * pose; vanilla would repeat identical animation setup and traversal for each. Copy the captured
    * part transforms instead, keeping each member's own material, tint, light and sprite UVs.
    */
-  private static Reason replicate(
-      Batch batch, int light, int overlay, int color, TextureAtlasSprite sprite) {
+  private static Reason replicate(Batch batch, int light, int overlay, int color, Object uv) {
     for (int i = templateStart; i < templateEnd; i++) {
       var source = templateBatch.instances.get(i);
       var mesh =
-          sprite == templateSprite
+          uv == templateUv
               ? source.mesh
               : mesh(
                   source.part,
                   ((ModelPartCubesAccessor) (Object) source.part).drawless$cubes(),
-                  sprite);
+                  uv);
       if (mesh == null) return Reason.MESH;
       var instance = batch.next();
       if (instance == null) return Reason.CAPACITY;
@@ -407,7 +446,7 @@ public final class PlayerArmorGeometry {
     }
     var cubes = ((ModelPartCubesAccessor) (Object) part).drawless$cubes();
     if (cubes.isEmpty()) return;
-    var mesh = mesh(part, cubes, captureSprite);
+    var mesh = mesh(part, cubes, captureUv);
     if (mesh == null) {
       partFailed = true;
       return;
@@ -425,7 +464,8 @@ public final class PlayerArmorGeometry {
     touched.clear();
   }
 
-  private static Mesh mesh(ModelPart part, List<ModelPart.Cube> cubes, TextureAtlasSprite sprite) {
+  /** {@code uv}: null for raw texture UVs, a trim sprite, or a base-armor atlas slot. */
+  private static Mesh mesh(ModelPart part, List<ModelPart.Cube> cubes, Object uv) {
     var meshes = parts.get(part);
     if (meshes != null && !meshes.matches(cubes)) {
       // Rebuilt cubes leave their old vertices unreachable until the next reset.
@@ -438,16 +478,16 @@ public final class PlayerArmorGeometry {
       parts.put(part, meshes);
     }
     if (!meshes.supported) return null;
-    var mesh = sprite == null ? meshes.plain : meshes.sprites.get(sprite);
+    var mesh = uv == null ? meshes.plain : meshes.mapped.get(uv);
     if (mesh != null) return mesh;
-    mesh = build(meshes, sprite);
+    mesh = build(meshes, uv);
     if (mesh == null) return null;
-    if (sprite == null) meshes.plain = mesh;
-    else meshes.sprites.put(sprite, mesh);
+    if (uv == null) meshes.plain = mesh;
+    else meshes.mapped.put(uv, mesh);
     return mesh;
   }
 
-  private static Mesh build(PartMeshes meshes, TextureAtlasSprite sprite) {
+  private static Mesh build(PartMeshes meshes, Object uv) {
     int count = meshes.vertexCount;
     if (vertices + count > maxVertices) return null;
     ensureCpuCapacity((vertices + count) * VERTEX_BYTES);
@@ -456,8 +496,14 @@ public final class PlayerArmorGeometry {
       for (var polygon : polygons) {
         var n = polygon.normal();
         for (var vertex : polygon.vertices()) {
-          float u = sprite == null ? vertex.u() : sprite.getU(vertex.u());
-          float v = sprite == null ? vertex.v() : sprite.getV(vertex.v());
+          float u = vertex.u(), v = vertex.v();
+          if (uv instanceof TextureAtlasSprite sprite) {
+            u = sprite.getU(u);
+            v = sprite.getV(v);
+          } else if (uv instanceof AtlasSlot slot) {
+            u = slot.u(u);
+            v = slot.v(v);
+          }
           geometryData.putFloat(vertex.worldX()).putFloat(vertex.worldY());
           geometryData.putFloat(vertex.worldZ()).putFloat(u);
           geometryData.putFloat(n.x()).putFloat(n.y()).putFloat(n.z()).putFloat(v);
@@ -538,15 +584,16 @@ public final class PlayerArmorGeometry {
     return null;
   }
 
-  private static Batch batch(RenderType type, int order) {
-    var list = batches.computeIfAbsent(type, key -> new ArrayList<>(2));
+  private static Batch batch(Object key, RenderType type, int rank) {
+    var list = batches.computeIfAbsent(key, k -> new ArrayList<>(2));
+    // Leave room for a whole piece so a nearly full chunk does not refuse every later piece.
     for (var batch : list)
-      if (batch.order == order && batch.used < MAX_INSTANCES) {
+      if (batch.used + PIECE_HEADROOM <= MAX_INSTANCES) {
         activate(batch);
         return batch;
       }
     if (batches.size() > 256 || list.size() > 64) return null;
-    var batch = new Batch(type, order);
+    var batch = new Batch(type, rank, key == ATLAS);
     list.add(batch);
     activate(batch);
     return batch;
@@ -571,13 +618,10 @@ public final class PlayerArmorGeometry {
     matrix.pushMatrix();
     try {
       uploadGeometry();
-      // Vanilla routes blended model submits (glint) to the translucent model phase, after every
-      // solid group, so glint also covers later overlay and trim layers. Solid groups follow
-      // ascending submit order; within an order keep first submission.
-      active.sort(
-          Comparator.comparingInt((Batch b) -> b.type.hasBlending() ? 1 : 0)
-              .thenComparingInt(b -> b.order)
-              .thenComparingInt(b -> b.sequence));
+      // Within a piece vanilla submits base layers, then trims; blended glint goes to the
+      // translucent model phase after every solid group. EQUAL-depth members only interact
+      // inside their piece, so ranks base < trim < glint preserve each piece's order.
+      active.sort(Comparator.comparingInt((Batch b) -> b.rank).thenComparingInt(b -> b.sequence));
       for (var batch : active) if (batch.used > 0) batch.prepare();
       uploadNanos = System.nanoTime() - start;
       uploadNanosTotal += uploadNanos;
@@ -648,7 +692,10 @@ public final class PlayerArmorGeometry {
           scissored = false;
         }
         for (var texture : prepared.textures())
-          pass.bindTexture(texture.name(), texture.textureView(), texture.sampler());
+          pass.bindTexture(
+              texture.name(),
+              batch.atlas && texture.name().equals("Sampler0") ? atlasView : texture.textureView(),
+              texture.sampler());
         pass.setIndexBuffer(batch.indices, IndexType.INT);
         pass.drawIndexed(batch.indexCount, 1, 0, 0, 0);
         frameDraws++;
@@ -656,6 +703,80 @@ public final class PlayerArmorGeometry {
     } finally {
       if (pass != null) pass.close();
       for (var batch : active) if (batch.used > 0 && batch.live != null) batch.live.rotate();
+    }
+  }
+
+  private static AtlasSlot slot(RenderType type) {
+    if (slots.containsKey(type)) return slots.get(type);
+    AtlasSlot slot;
+    try {
+      slot = admit(type);
+    } catch (IOException | RuntimeException failure) {
+      slot = null;
+    }
+    if (slots.size() < 1024) slots.put(type, slot);
+    return slot;
+  }
+
+  /**
+   * Copies a resource-backed base armor texture into the shared atlas so every base and overlay
+   * layer draws in one call. Vanilla textures lack COPY_SRC, so the atlas is filled from the same
+   * resource contents SimpleTexture loads; the bound texture's size and sampler must match. A
+   * one-texel gutter repeats or clamps the edges like the original sampler addressing.
+   */
+  private static AtlasSlot admit(RenderType type) throws IOException {
+    var id = armorTextures.get(type);
+    if (id == null || type.pipeline() != RenderPipelines.ARMOR_CUTOUT_NO_CULL) return null;
+    var client = Minecraft.getInstance();
+    var texture = client.getTextureManager().getTexture(id);
+    if (texture.getClass() != SimpleTexture.class) return null;
+    GpuSampler sampler = null;
+    for (var binding : type.prepare().textures())
+      if (binding.name().equals("Sampler0")
+          && binding.textureView().texture() == texture.getTexture()) sampler = binding.sampler();
+    if (sampler == null || atlasSampler != null && sampler != atlasSampler) return null;
+    try (var contents = TextureContents.load(client.getResourceManager(), id)) {
+      var image = contents.image();
+      int w = image.getWidth(), h = image.getHeight();
+      if (w != texture.getTexture().getWidth(0) || h != texture.getTexture().getHeight(0))
+        return null;
+      if (shelfX + w + 2 > ATLAS_SIZE) {
+        shelfX = 0;
+        shelfY += shelfHeight;
+        shelfHeight = 0;
+      }
+      if (w + 2 > ATLAS_SIZE || shelfY + h + 2 > ATLAS_SIZE) return null;
+      if (atlas == null) {
+        atlas =
+            RenderSystem.getDevice()
+                .createTexture(
+                    "DrawLess retained armor atlas",
+                    GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING,
+                    com.mojang.blaze3d.GpuFormat.RGBA8_UNORM,
+                    ATLAS_SIZE,
+                    ATLAS_SIZE,
+                    1,
+                    1);
+        atlasView = RenderSystem.getDevice().createTextureView(atlas);
+      }
+      boolean clamp = contents.clamp();
+      try (var padded = new NativeImage(w + 2, h + 2, false)) {
+        for (int y = -1; y <= h; y++)
+          for (int x = -1; x <= w; x++) {
+            int sx = clamp ? Math.clamp(x, 0, w - 1) : Math.floorMod(x, w);
+            int sy = clamp ? Math.clamp(y, 0, h - 1) : Math.floorMod(y, h);
+            padded.setPixel(x + 1, y + 1, image.getPixel(sx, sy));
+          }
+        RenderSystem.getDevice()
+            .createCommandEncoder()
+            .writeToTexture(atlas, padded, 0, 0, shelfX, shelfY);
+      }
+      var slot = new AtlasSlot(shelfX + 1, shelfY + 1, w, h);
+      shelfX += w + 2;
+      shelfHeight = Math.max(shelfHeight, h + 2);
+      atlasSampler = sampler;
+      atlasTextures++;
+      return slot;
     }
   }
 
@@ -699,7 +820,7 @@ public final class PlayerArmorGeometry {
     if (!requested()) return "status=off";
     int meshes = 0;
     for (var part : parts.values())
-      if (part.supported) meshes += (part.plain == null ? 0 : 1) + part.sprites.size();
+      if (part.supported) meshes += (part.plain == null ? 0 : 1) + part.mapped.size();
     var reasonText = new StringBuilder();
     for (var reason : Reason.values())
       if (reason != Reason.READY && reasons[reason.ordinal()] > 0) {
@@ -714,7 +835,8 @@ public final class PlayerArmorGeometry {
             + "replicatedSubmitsTotal=%d; "
             + "instancesTotal=%d; drawsTotal=%d; parts=%d; meshes=%d; meshVertices=%d; "
             + "meshBuilds=%d; indexRebuilds=%d; geometryUploadedBytes=%d; "
-            + "instanceUploadedBytes=%d; capture=%.4fms; upload=%.4fms; drawCpu=%.4fms; "
+            + "instanceUploadedBytes=%d; atlasTextures=%d; capture=%.4fms; upload=%.4fms; "
+            + "drawCpu=%.4fms; "
             + "captureTotalMs=%.4f; uploadTotalMs=%.4f; drawTotalMs=%.4f; fallback=%s",
         enabled ? "on" : blocked.isEmpty() ? "idle" : blocked,
         framePieces,
@@ -737,6 +859,7 @@ public final class PlayerArmorGeometry {
         indexRebuilds,
         geometryUploadedBytes,
         instanceUploadedBytes,
+        atlasTextures,
         captureNanos / 1e6,
         uploadNanos / 1e6,
         drawNanos / 1e6,
@@ -752,6 +875,7 @@ public final class PlayerArmorGeometry {
     OUTLINE("outline-or-crumbling"),
     SPRITE("animated-sprite"),
     PIPELINE("pipeline"),
+    TEXTURE("texture"),
     CAPACITY("capacity"),
     MESH("mesh"),
     RAW("raw-vertices"),
@@ -765,13 +889,24 @@ public final class PlayerArmorGeometry {
 
   private record Mesh(int firstVertex, int vertexCount) {}
 
+  /** Base-armor texture placement inside the atlas; exact for power-of-two sizes. */
+  private record AtlasSlot(int x, int y, int width, int height) {
+    float u(float u) {
+      return (x + u * width) / ATLAS_SIZE;
+    }
+
+    float v(float v) {
+      return (y + v * height) / ATLAS_SIZE;
+    }
+  }
+
   /** Resource-lifetime topology snapshot of one model part; identity-validated on every use. */
   private static final class PartMeshes {
     final ModelPart.Cube[] cubes;
     final ModelPart.Polygon[][] polygons;
     final boolean supported;
     final int vertexCount;
-    final IdentityHashMap<TextureAtlasSprite, Mesh> sprites = new IdentityHashMap<>(2);
+    final IdentityHashMap<Object, Mesh> mapped = new IdentityHashMap<>(4);
     Mesh plain;
 
     private PartMeshes(ModelPart.Cube[] cubes, ModelPart.Polygon[][] polygons, int vertexCount) {
@@ -868,16 +1003,18 @@ public final class PlayerArmorGeometry {
 
   private static final class Batch implements AutoCloseable {
     final RenderType type;
-    final int order;
+    final int rank;
+    final boolean atlas;
     final ArrayList<Instance> instances = new ArrayList<>();
     Mesh[] previous = new Mesh[0];
     int used, pieceStart, sequence, indexCount, previousCount;
     GpuBuffer indices;
     MappableRingBuffer live;
 
-    Batch(RenderType type, int order) {
+    Batch(RenderType type, int rank, boolean atlas) {
       this.type = type;
-      this.order = order;
+      this.rank = rank;
+      this.atlas = atlas;
     }
 
     Instance next() {

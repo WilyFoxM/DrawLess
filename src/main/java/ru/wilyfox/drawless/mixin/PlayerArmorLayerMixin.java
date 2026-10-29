@@ -58,11 +58,11 @@ public class PlayerArmorLayerMixin {
           @At(
               value = "INVOKE",
               target =
-                  "Lnet/minecraft/client/renderer/SubmitNodeCollector;order(I)Lnet/minecraft/client/renderer/OrderedSubmitNodeCollector;"))
-  private OrderedSubmitNodeCollector drawless$order(
-      SubmitNodeCollector collector, int order, Operation<OrderedSubmitNodeCollector> original) {
-    PlayerArmorGeometry.order(order);
-    return original.call(collector, order);
+                  "Lnet/minecraft/client/renderer/rendertype/RenderTypes;armorCutoutNoCull(Lnet/minecraft/resources/Identifier;)Lnet/minecraft/client/renderer/rendertype/RenderType;"))
+  private RenderType drawless$armorTexture(Identifier texture, Operation<RenderType> original) {
+    var type = original.call(texture);
+    PlayerArmorGeometry.armorTexture(type, texture);
+    return type;
   }
 
   @WrapOperation(
