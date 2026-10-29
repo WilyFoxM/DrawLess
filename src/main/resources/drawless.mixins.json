@@ -63,6 +63,10 @@
     "ParticleCollisionSectionMixin",
     "ParticleCollisionChunkMixin",
     "ParticleVisibilityProbeMixin",
-    "ParticleEngineMixin"
+    "ParticleEngineMixin",
+    "ModelPartCubesAccessor",
+    "PlayerArmorPartMixin",
+    "PlayerArmorLayerMixin",
+    "PlayerArmorWorldMixin"
   ]
 }

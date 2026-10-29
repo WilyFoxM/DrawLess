@@ -87,7 +87,8 @@ public final class DrawLessScreen extends Screen {
           scroll = 0;
           rebuildRows();
         });
-    int navHeight = Math.min(24, Math.max(16, (panelHeight - 90) / 4));
+    int navHeight =
+        Math.min(24, Math.max(16, (panelHeight - 90) / SettingsCatalog.Page.values().length - 3));
     for (var category : SettingsCatalog.Page.values()) {
       addRenderableWidget(
           button(

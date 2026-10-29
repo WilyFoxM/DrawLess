@@ -16,6 +16,7 @@ import ru.wilyfox.drawless.performance.FeatureBatching;
 final class SettingsCatalog {
   enum Page {
     RENDERING,
+    PLAYERS,
     PARTICLES,
     ADVANCED,
     DIAGNOSTICS;
@@ -58,6 +59,13 @@ final class SettingsCatalog {
   static List<Option> create() {
     var options = new ArrayList<Option>();
     options.add(toggle("enabled", Page.RENDERING, () -> c().enabled, v -> c().enabled = v));
+    options.add(
+        toggle(
+            "player_armor_geometry",
+            Page.PLAYERS,
+            () -> c().playerArmorGeometry,
+            v -> c().playerArmorGeometry = v,
+            () -> RenderModSupport.IRIS ? reason("iris") : null));
     options.add(
         choice(
             "display_mode",

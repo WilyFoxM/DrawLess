@@ -21,6 +21,9 @@ public final class DrawLessMixinPlugin implements IMixinConfigPlugin {
     if (mixin.endsWith(".TextBufferReuseMixin") || mixin.endsWith(".StagedBufferReuseAccessor")) {
       return !RenderModSupport.IMMEDIATELY_FAST;
     }
+    // Shader packs replace the entity programs that retained armor derives its pipelines from.
+    if (mixin.contains(".PlayerArmor") || mixin.endsWith(".ModelPartCubesAccessor"))
+      return !RenderModSupport.IRIS;
     return true;
   }
 
