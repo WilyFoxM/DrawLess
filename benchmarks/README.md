@@ -30,6 +30,8 @@ The headline series is `release2`. Two more series were recorded at the same cam
 
 Each ON is compared with the arithmetic mean FPS of its immediately neighboring OFF phases; the headline is the arithmetic mean of the three percentage changes. All nine ON phases of the session exceed both of their neighboring OFF phases.
 
+[![All seven phases with rendered player models](results/spawn-20261031/phase-fps.png)](results/spawn-20261031/phase-fps.png)
+
 | Series | Paired changes | Mean paired change | Population-adjusted mean | OFF range/mean |
 |---|---|---:|---:|---:|
 | release1 | +28.75 / +28.26 / +28.35% | +28.45% | +30.35% | 3.19% |
@@ -55,6 +57,20 @@ In `release3` the last OFF phase drops to 159.56 FPS after the scene changed (10
 | OFF4 | 426–426 | 312–312 | 1606–1823 | 10–11 | 9–10 |
 
 Rendered player models are avatar render states (players and mannequins) after frustum culling, sampled over every measured frame between one-second samples; loaded players include me. The Item Display population changes by 12 entries during `release2`, above the 2% screening threshold. Particle counts fluctuate naturally. No samples were selected by population to replace the full-phase result.
+
+### Measured retained geometry costs
+
+[![Measured CPU scopes of the three retained geometry paths](results/spawn-20261031/retained-cpu.png)](results/spawn-20261031/retained-cpu.png)
+
+Three paths keep geometry on the GPU in this scene: Item Displays (Live geometry), armor on players and items on players. Their measured CPU scopes are pooled over the three ON phases of `release2` (13,243 active frames per path), using first-to-last sample differences of cumulative counters, divided by frames.
+
+| Path | Capture CPU ms/frame | Upload CPU ms/frame | Draw CPU ms/frame | Sum |
+|---|---:|---:|---:|---:|
+| Item Displays | 0.151 | 0.026 | 0.077 | 0.253 |
+| Armor on players | 0.049 | 0.012 | 0.105 | 0.166 |
+| Items on players | 0.022 | 0.006 | 0.102 | 0.130 |
+
+Together the three paths cost about 0.55 ms of measured CPU per frame. This is the price inside the named scopes, not the net effect: the vanilla work they replace is not counted here, and GPU execution, particle caches, feature batching and other overhead are not included. Per frame, the ON phases report 212–224 Item Display parts in one draw, 25–32 armor pieces in two draws and 15–21 player item stacks in two draws; translucent player items stay on the ordinary path.
 
 ### Review findings and limitations
 
