@@ -238,7 +238,7 @@ public final class DisplayProbe {
       if (area != null) {
         var section = area.getRenderSectionAt(position.set(avatar.x, avatar.y, avatar.z));
         if (section == null || graph.getNode(section) == null) outside++;
-      }
+      } else if (SodiumVisibility.available && !SodiumVisibility.visible(avatar)) outside++;
     }
     return new Population(
         session.windowIntervals,
@@ -251,7 +251,34 @@ public final class DisplayProbe {
         avatars,
         held,
         head,
-        area == null ? -1 : outside);
+        area != null || SodiumVisibility.available ? outside : -1);
+  }
+
+  /**
+   * Sodium's own section visibility for an avatar-sized box around the render state, from the graph
+   * of the frame being extracted. Isolated so Sodium classes load only with Sodium; a Sodium build
+   * without this method turns the counter off instead of failing the probe.
+   */
+  private static final class SodiumVisibility {
+    static boolean available = RenderModSupport.SODIUM;
+
+    static boolean visible(AvatarRenderState avatar) {
+      try {
+        var renderer =
+            net.caffeinemc.mods.sodium.client.render.SodiumWorldRenderer.instanceNullable();
+        return renderer == null
+            || renderer.isBoxVisible(
+                avatar.x - 0.3,
+                avatar.y,
+                avatar.z - 0.3,
+                avatar.x + 0.3,
+                avatar.y + 1.8,
+                avatar.z + 0.3);
+      } catch (NoSuchMethodError | NoClassDefFoundError incompatible) {
+        available = false;
+        return true;
+      }
+    }
   }
 
   static Counts count(Iterable<Entity> entities, LevelRenderState state, Frustum frustum) {
@@ -444,7 +471,7 @@ public final class DisplayProbe {
               sample.scanNanos / 1e6));
     }
     out.append(
-        "\n## Rendered avatar population by sample\n\nAvatars are extracted player and mannequin render states (after frustum and any renderer-side culling), unlike the loaded Players column. Window FPS, min–max and mean cover measured frames since the previous sample; the other columns describe the sampled frame. Held items count non-empty hand states; head items include worn skulls. Outside graph counts avatars in sections the vanilla occlusion graph did not reach this frame — candidates for occlusion work, not proof of invisibility. Block edits only extend the graph until it is rebuilt (for example when the camera enters another section), so newly enclosed sections may still count as reached. n/a when another renderer owns section visibility.\n\n| s | Window frames | Window FPS | Avatars min–max | Window mean | Avatars | Held items | Head items | Outside graph |\n| ---: | ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: |\n");
+        "\n## Rendered avatar population by sample\n\nAvatars are extracted player and mannequin render states (after frustum and any renderer-side culling), unlike the loaded Players column. Window FPS, min–max and mean cover measured frames since the previous sample; the other columns describe the sampled frame. Held items count non-empty hand states; head items include worn skulls. Outside graph counts avatars in sections the occlusion graph did not reach this frame: the vanilla section graph, or Sodium's section visibility for an avatar-sized box when Sodium renders terrain — candidates for occlusion work, not proof of invisibility. The vanilla graph only extends after block edits until it is rebuilt (for example when the camera enters another section), so newly enclosed sections may still count as reached. n/a when neither source is available.\n\n| s | Window frames | Window FPS | Avatars min–max | Window mean | Avatars | Held items | Head items | Outside graph |\n| ---: | ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: |\n");
     for (Sample sample : samples) {
       var p = sample.population;
       out.append(
