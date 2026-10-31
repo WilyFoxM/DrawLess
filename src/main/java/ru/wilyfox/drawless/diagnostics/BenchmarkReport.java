@@ -26,7 +26,7 @@ final class BenchmarkReport {
       List<DisplayProbe.Result> runs) {
     var gson = new GsonBuilder().setPrettyPrinting().create();
     var json = new JsonObject();
-    json.addProperty("schema_version", 2);
+    json.addProperty("schema_version", 3);
     json.addProperty("label", label);
     json.addProperty("result", reason);
     json.addProperty("target", target);
@@ -61,7 +61,9 @@ final class BenchmarkReport {
     json.add("phases", phases);
     var warnings = new ArrayList<>(environmentWarnings);
     List<BracketedComparison.Pair> pairs = List.of(), matchedPairs = List.of();
+    List<BracketedComparison.Pair> adjustedPairs = List.of();
     PopulationMatch.Result match = null;
+    PopulationRegression.Result adjusted = null;
     boolean complete =
         reason.equals("complete") && runs.size() == BracketedComparison.phases(brackets);
     if (complete) {
@@ -89,6 +91,20 @@ final class BenchmarkReport {
                   .toList());
       matchedPairs = populationMatchWarning(match, warnings);
       json.add("population_match", gson.toJsonTree(match));
+      adjusted =
+          PopulationRegression.fit(
+              runs.stream()
+                  .map(r -> r.samples().stream().map(DisplayProbe.Sample::population).toList())
+                  .toList());
+      adjustedPairs = populationAdjustedWarning(adjusted, warnings);
+      json.add("population_adjusted", gson.toJsonTree(adjusted));
+      if (!adjustedPairs.isEmpty())
+        json.addProperty(
+            "mean_population_adjusted_change_percent",
+            adjustedPairs.stream()
+                .mapToDouble(BracketedComparison.Pair::changePercent)
+                .average()
+                .orElseThrow());
       if (!matchedPairs.isEmpty())
         json.addProperty(
             "mean_population_matched_change_percent",
@@ -115,6 +131,7 @@ final class BenchmarkReport {
         "Particle stage timings are CPU-only; encoding is nested in preparation. Shared upload and GPU execution are not isolated.");
     json.add("pairs", gson.toJsonTree(pairs));
     json.add("population_matched_pairs", gson.toJsonTree(matchedPairs));
+    json.add("population_adjusted_pairs", gson.toJsonTree(adjustedPairs));
     json.add("review_flags", gson.toJsonTree(warnings));
     json.addProperty("publication_status", "manual_review_required");
     var out =
@@ -212,6 +229,57 @@ final class BenchmarkReport {
                     .orElseThrow()));
       }
     }
+    if (adjusted != null) {
+      out.append(
+          "\n## Population-adjusted comparison\n\nEach one-second window gives a mean frame time and a mean rendered avatar count. One slope (frame milliseconds per avatar) is estimated from variation within phases only; each phase is then moved to the series' mean avatar count. A fit with separate OFF and ON slopes is the sensitivity check. This corrects avatar-count drift only, not other scene changes.\n\n");
+      if (!adjusted.comparable())
+        out.append("Not computed: ").append(adjusted.reason()).append('\n');
+      else {
+        out.append(
+            String.format(
+                Locale.ROOT,
+                "Slope %.4f ± %.4f ms per avatar (OFF-only %.4f, ON-only %.4f); reference %.2f avatars.%s\n\n",
+                adjusted.slopeMsPerAvatar(),
+                adjusted.slopeStdErr(),
+                adjusted.offSlopeMsPerAvatar(),
+                adjusted.onSlopeMsPerAvatar(),
+                adjusted.referenceAvatars(),
+                adjusted.reason().isEmpty() ? "" : " " + adjusted.reason()));
+        out.append(
+            "| Phase | Windows | Mean avatars | Raw frame ms | Shift ms | Adjusted FPS |\n| --- | ---: | ---: | ---: | ---: | ---: |\n");
+        for (int i = 0; i < runs.size(); i++) {
+          var phase = adjusted.phases().get(i);
+          out.append(
+              String.format(
+                  Locale.ROOT,
+                  "| %s | %d | %.2f | %.3f | %+.3f ± %.3f | %.2f |\n",
+                  runs.get(i).label(),
+                  phase.windows(),
+                  phase.meanAvatars(),
+                  phase.meanFrameMs(),
+                  phase.adjustedFrameMs() - phase.meanFrameMs(),
+                  phase.shiftStdErrMs(),
+                  phase.adjustedFps()));
+        }
+        out.append(
+            "\n| ON phase | Neighboring OFF adjusted FPS | ON adjusted FPS | Change |\n| ---: | ---: | ---: | ---: |\n");
+        for (var pair : adjustedPairs)
+          out.append(
+              String.format(
+                  Locale.ROOT,
+                  "| %d | %.2f | %.2f | %+.2f%% |\n",
+                  pair.onPhase(),
+                  pair.baselineFps(),
+                  pair.onFps(),
+                  pair.changePercent()));
+        out.append(
+            String.format(
+                Locale.ROOT,
+                "\nMean population-adjusted change: **%+.2f%%** (separate OFF/ON slopes: %+.2f%%).\n",
+                mean(adjustedPairs),
+                mean(BracketedComparison.pairs(adjusted.separateSlopeFps()))));
+      }
+    }
     out.append("\n## Review flags\n\n");
     warnings.forEach(w -> out.append("- ").append(w).append('\n'));
     out.append("\n## Environment\n\n")
@@ -245,6 +313,39 @@ final class BenchmarkReport {
               + "–"
               + values.getMax()
               + ". Review scene comparability.");
+  }
+
+  /** Pairs on population-adjusted FPS, or none with a flag saying why no adjusted claim is made. */
+  static List<BracketedComparison.Pair> populationAdjustedWarning(
+      PopulationRegression.Result adjusted, List<String> warnings) {
+    if (!adjusted.comparable()) {
+      warnings.add("No population-adjusted comparison: " + adjusted.reason());
+      return List.of();
+    }
+    var pairs = BracketedComparison.pairs(adjusted.fps());
+    double common = mean(pairs);
+    double separate = mean(BracketedComparison.pairs(adjusted.separateSlopeFps()));
+    if (Math.abs(common - separate) > PopulationRegression.SENSITIVITY_LIMIT)
+      warnings.add(
+          String.format(
+              Locale.ROOT,
+              "Population adjustment is sensitive to the slope model: common slope %+.2f%%, separate OFF/ON slopes %+.2f%%.",
+              common,
+              separate));
+    double worst = 0;
+    for (var phase : adjusted.phases())
+      worst = Math.max(worst, phase.shiftStdErrMs() / phase.meanFrameMs() * 100);
+    if (worst > 1)
+      warnings.add(
+          String.format(
+              Locale.ROOT,
+              "Population shift uncertainty reaches %.2f%% of a phase's frame time; treat adjusted pairs as rough.",
+              worst));
+    return pairs;
+  }
+
+  private static double mean(List<BracketedComparison.Pair> pairs) {
+    return pairs.stream().mapToDouble(BracketedComparison.Pair::changePercent).average().orElse(0);
   }
 
   /** Pairs on standardized FPS, or none with a flag saying why no matched claim is made. */

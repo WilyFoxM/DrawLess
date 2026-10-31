@@ -171,6 +171,8 @@ public final class DisplayProbe {
       if (entityState instanceof AvatarRenderState) avatars++;
     session.windowMinAvatars = Math.min(session.windowMinAvatars, avatars);
     session.windowMaxAvatars = Math.max(session.windowMaxAvatars, avatars);
+    session.windowAvatarSum += avatars;
+    session.windowAvatarFrames++;
     if (!client.getWindow().isFocused()) session.unfocusedFrames++;
     if (now >= session.nextSampleAt && session.samples.size() < 24) {
       session.nextSampleAt = now + SECOND;
@@ -181,6 +183,7 @@ public final class DisplayProbe {
         session.windowIntervals = session.windowNanos = 0;
         session.windowMinAvatars = Integer.MAX_VALUE;
         session.windowMaxAvatars = -1;
+        session.windowAvatarSum = session.windowAvatarFrames = 0;
         session.samples.add(
             new Sample(
                 (now - session.measurementStart) / 1e9,
@@ -242,6 +245,9 @@ public final class DisplayProbe {
         session.windowNanos,
         session.windowMinAvatars == Integer.MAX_VALUE ? avatars : session.windowMinAvatars,
         Math.max(session.windowMaxAvatars, avatars),
+        session.windowAvatarFrames == 0
+            ? avatars
+            : (double) session.windowAvatarSum / session.windowAvatarFrames,
         avatars,
         held,
         head,
@@ -438,13 +444,13 @@ public final class DisplayProbe {
               sample.scanNanos / 1e6));
     }
     out.append(
-        "\n## Rendered avatar population by sample\n\nAvatars are extracted player and mannequin render states (after frustum and any renderer-side culling), unlike the loaded Players column. Window FPS and min–max cover measured frames since the previous sample; the other columns describe the sampled frame. Held items count non-empty hand states; head items include worn skulls. Outside graph counts avatars in sections the vanilla occlusion graph did not reach this frame — candidates for occlusion work, not proof of invisibility. Block edits only extend the graph until it is rebuilt (for example when the camera enters another section), so newly enclosed sections may still count as reached. n/a when another renderer owns section visibility.\n\n| s | Window frames | Window FPS | Avatars min–max | Avatars | Held items | Head items | Outside graph |\n| ---: | ---: | ---: | --- | ---: | ---: | ---: | ---: |\n");
+        "\n## Rendered avatar population by sample\n\nAvatars are extracted player and mannequin render states (after frustum and any renderer-side culling), unlike the loaded Players column. Window FPS, min–max and mean cover measured frames since the previous sample; the other columns describe the sampled frame. Held items count non-empty hand states; head items include worn skulls. Outside graph counts avatars in sections the vanilla occlusion graph did not reach this frame — candidates for occlusion work, not proof of invisibility. Block edits only extend the graph until it is rebuilt (for example when the camera enters another section), so newly enclosed sections may still count as reached. n/a when another renderer owns section visibility.\n\n| s | Window frames | Window FPS | Avatars min–max | Window mean | Avatars | Held items | Head items | Outside graph |\n| ---: | ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: |\n");
     for (Sample sample : samples) {
       var p = sample.population;
       out.append(
           String.format(
               Locale.ROOT,
-              "| %.2f | %d | %s | %d–%d | %d | %d | %d | %s |\n",
+              "| %.2f | %d | %s | %d–%d | %.2f | %d | %d | %d | %s |\n",
               sample.seconds,
               p.windowIntervals,
               p.windowNanos > 0
@@ -452,6 +458,7 @@ public final class DisplayProbe {
                   : "–",
               p.avatarsMin,
               p.avatarsMax,
+              p.avatarsMean,
               p.avatars,
               p.heldItems,
               p.headItems,
@@ -527,8 +534,8 @@ public final class DisplayProbe {
     final long requestedAt = System.nanoTime();
     final List<Sample> samples = new ArrayList<>(24);
     long measurementStart, nextSampleAt, lastFrameAt, frameIntervals, frameIntervalNanos;
-    long windowIntervals, windowNanos;
-    int windowMinAvatars = Integer.MAX_VALUE, windowMaxAvatars = -1;
+    long windowIntervals, windowNanos, windowAvatarSum;
+    int windowMinAvatars = Integer.MAX_VALUE, windowMaxAvatars = -1, windowAvatarFrames;
     int menuFrames, unfocusedFrames;
     Path directory;
     String metadata = "";
@@ -673,6 +680,7 @@ public final class DisplayProbe {
       long windowNanos,
       int avatarsMin,
       int avatarsMax,
+      double avatarsMean,
       int avatars,
       int heldItems,
       int headItems,
