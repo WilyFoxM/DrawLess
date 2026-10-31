@@ -30,6 +30,7 @@ public final class DrawLess implements ClientModInitializer {
     BenchmarkSeries.register();
     PlayerProfile.register();
     PlayerArmorGeometry.register();
+    PlayerItemGeometry.register();
     SodiumBrushableBlockEntityCulling.registerIfAvailable();
     ClientCommandRegistrationCallback.EVENT.register(
         (dispatcher, access) ->

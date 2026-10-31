@@ -17,5 +17,6 @@ public class DisplayModelReloadMixin {
     ru.wilyfox.drawless.performance.LiveDisplayGeometry.reload();
     ru.wilyfox.drawless.performance.ParticleSpatialContext.clear();
     ru.wilyfox.drawless.performance.PlayerArmorGeometry.reload();
+    ru.wilyfox.drawless.performance.PlayerItemGeometry.reload();
   }
 }

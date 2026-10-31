@@ -97,7 +97,10 @@ final class BenchmarkReport {
                 .average()
                 .orElseThrow());
       particlePopulationWarning(runs, warnings, target.startsWith("particle"));
-      if (target.equals("player_armor")) playerArmorWarning(runs, warnings);
+      if (target.equals("player_armor"))
+        retainedWarning(runs, warnings, DisplayProbe.Sample::playerArmor, "player armor");
+      if (target.equals("player_items"))
+        retainedWarning(runs, warnings, DisplayProbe.Sample::playerItems, "player item");
       json.addProperty(
           "mean_paired_change_percent",
           pairs.stream()
@@ -303,35 +306,53 @@ final class BenchmarkReport {
               + ". Review particle workload comparability.");
   }
 
-  static void playerArmorWarning(List<DisplayProbe.Result> runs, List<String> warnings) {
+  /** ON phases of a retained-geometry target must actually capture pieces of that kind. */
+  static void retainedWarning(
+      List<DisplayProbe.Result> runs,
+      List<String> warnings,
+      java.util.function.Function<DisplayProbe.Sample, String> diagnostic,
+      String kind) {
     for (int i = 1; i < runs.size(); i += 2) {
       var samples = runs.get(i).samples();
-      long pieces = armorDelta(samples, "piecesTotal");
-      long fallback = armorDelta(samples, "fallbackPiecesTotal");
+      long pieces = delta(samples, diagnostic, "piecesTotal");
+      long fallback = delta(samples, diagnostic, "fallbackPiecesTotal");
       if (pieces < 0 || fallback < 0) {
         warnings.add(
-            "Retained armor counters could not be compared for "
+            "Retained "
+                + kind
+                + " counters could not be compared for "
                 + runs.get(i).label()
                 + ". Inspect the raw samples.");
       } else if (pieces == 0) {
         warnings.add(
-            "No player armor pieces were rendered in "
+            "No "
+                + kind
+                + " pieces were rendered in "
                 + runs.get(i).label()
-                + ". This scene cannot demonstrate retained armor geometry.");
+                + ". This scene cannot demonstrate retained "
+                + kind
+                + " geometry.");
       } else if (fallback == pieces) {
         warnings.add(
-            "Every player armor piece used the ordinary path in "
+            "Every "
+                + kind
+                + " piece used the ordinary path in "
                 + runs.get(i).label()
-                + ". Review the fallback reasons before attributing an FPS change to retained armor.");
+                + ". Review the fallback reasons before attributing an FPS change to retained "
+                + kind
+                + " geometry.");
       }
     }
   }
 
-  private static long armorDelta(List<DisplayProbe.Sample> samples, String key) {
+  private static long delta(
+      List<DisplayProbe.Sample> samples,
+      java.util.function.Function<DisplayProbe.Sample, String> diagnostic,
+      String key) {
     if (samples.size() < 2) return -1;
     var pattern = java.util.regex.Pattern.compile("(?:^|; )" + key + "=(\\d+)(?:;|$)");
-    var first = pattern.matcher(samples.getFirst().playerArmor());
-    var last = pattern.matcher(samples.getLast().playerArmor());
+    var first = pattern.matcher(diagnostic.apply(samples.getFirst()));
+    var last = pattern.matcher(diagnostic.apply(samples.getLast()));
     if (!first.find() || !last.find()) return -1;
     try {
       long a = Long.parseLong(first.group(1)), b = Long.parseLong(last.group(1));

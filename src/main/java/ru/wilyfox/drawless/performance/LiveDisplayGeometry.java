@@ -128,6 +128,7 @@ public final class LiveDisplayGeometry {
   }
 
   public static void beginFrame(Minecraft client) {
+    // Called every level frame, so it is also the shared item store's frame hook for all consumers.
     ItemMeshes.beginFrame(client);
     if (!requested() || client.level == null) {
       if (world != null) clear();
