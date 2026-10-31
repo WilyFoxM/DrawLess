@@ -95,3 +95,5 @@ Desktop.ini
 !/benchmarks/results/spawn-20261031/raw/benchmark-*/
 !/benchmarks/results/spawn-20261031/raw/benchmark-*/*.md
 !/benchmarks/results/spawn-20261031/raw/benchmark-*/summary.json
+!/benchmarks/results/spawn-20261031/phase-fps.png
+!/benchmarks/results/spawn-20261031/retained-cpu.png
