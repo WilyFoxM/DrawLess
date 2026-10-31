@@ -109,5 +109,5 @@
   "drawless.setting.player_armor_geometry": "GPU armor geometry",
   "drawless.setting.player_armor_geometry.description": "Keeps player armor meshes on the GPU and sends only part poses, lighting and tint each frame. Base layers, trims and glint of a piece always use the same path; unsupported armor uses vanilla rendering.",
   "drawless.setting.player_item_geometry": "GPU items on players",
-  "drawless.setting.player_item_geometry.description": "Keeps meshes of items held and worn on the head by players and mannequins on the GPU, shared with Item Displays, and sends only item poses, lighting and tint each frame. Enchanted, glowing, translucent and specially rendered items use vanilla rendering."
+  "drawless.setting.player_item_geometry.description": "Keeps meshes of items held and worn on the head by players and mannequins on the GPU, shared with Item Displays, and sends only item poses, lighting and tint each frame, including enchantment glint. Glowing, translucent and specially rendered items use vanilla rendering."
 }
