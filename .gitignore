@@ -86,3 +86,12 @@ Desktop.ini
 !/benchmarks/results/spawn-20261017/modrinth-card.png
 !/benchmarks/results/spawn-20261017/phase-fps.png
 !/benchmarks/results/spawn-20261017/cache-cpu.png
+
+# Benchmark 03 card and original measurements of all three series.
+!/benchmarks/results/spawn-20261031/
+!/benchmarks/results/spawn-20261031/modrinth-card.png
+!/benchmarks/results/spawn-20261031/raw/
+!/benchmarks/results/spawn-20261031/raw/SHA256SUMS.txt
+!/benchmarks/results/spawn-20261031/raw/benchmark-*/
+!/benchmarks/results/spawn-20261031/raw/benchmark-*/*.md
+!/benchmarks/results/spawn-20261031/raw/benchmark-*/summary.json

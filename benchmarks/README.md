@@ -2,7 +2,91 @@
 
 [Methodology](METHODOLOGY.md) · [0.1.0 correctness validation](VALIDATION_0.1.0.md) · [Rejected optimization experiments](../docs/REJECTED_OPTIMIZATIONS.md)
 
-Benchmark 02 is a development-build/selected-preset result. Benchmark 01 below remains the published 0.1.0/default-preset result. Neither is a direct comparison between versions.
+Benchmark 03 is the 1.3.0 release result with default settings and other players in the scene. Benchmark 02 is a development-build/selected-preset result with no other players present. Benchmark 01 remains the published 0.1.0/default-preset result. None of them is a direct comparison between versions.
+
+## Benchmark 03 — server spawn with players, 1.3.0
+
+**+29.24% mean paired FPS change** across three bracketed ON comparisons in one recorded series. Mean bracketed OFF baseline **179.50 FPS**; mean ON **231.99 FPS**.
+
+**This scene has players in it.** Every phase renders **8–11 other player models** (9–13 players loaded, including me), with their armor and held items, next to **426–438 Item Displays** and roughly 1000–1800 particles. Benchmarks 01 and 02 were recorded with no other players present (one loaded player: me). Benchmark 03 therefore measures DrawLess across a whole populated scene, not only Item Displays; its percentage is not comparable with the +34.53% of Benchmark 02 as a version-to-version change.
+
+**Measured build: 1.3.0** (release candidate, the published artifact), Sodium, default settings: master switch OFF versus the 1.3.0 defaults (Live geometry, model cache with adaptive budget, EXPANDED batching, particle caches, GPU armor and GPU items on players ON; text reuse, NPC budget and paused display ticks OFF). ImmediatelyFast is absent.
+
+[![Benchmark 03 headline](results/spawn-20261031/modrinth-card.png)](results/spawn-20261031/modrinth-card.png)
+
+### Every recorded phase
+
+The headline series is `release2`. Two more series were recorded at the same camera in the same session; they are listed beside it, not added to it.
+
+| Order | Phase | Mean observed FPS | Adjacent OFF baseline | Paired change | Rendered player models (mean) |
+|---:|---|---:|---:|---:|---:|
+| 1 | OFF1 | 178.70 | — | — | 8.98 |
+| 2 | ON1 | 229.56 | 178.947 | +28.284% | 8.66 |
+| 3 | OFF2 | 179.20 | — | — | 8.35 |
+| 4 | ON2 | 233.32 | 179.157 | +30.233% | 8.68 |
+| 5 | OFF3 | 179.12 | — | — | 9.38 |
+| 6 | ON3 | 233.08 | 180.401 | +29.203% | 10.14 |
+| 7 | OFF4 | 181.69 | — | — | 9.22 |
+
+Each ON is compared with the arithmetic mean FPS of its immediately neighboring OFF phases; the headline is the arithmetic mean of the three percentage changes. All nine ON phases of the session exceed both of their neighboring OFF phases.
+
+| Series | Paired changes | Mean paired change | Population-adjusted mean | OFF range/mean |
+|---|---|---:|---:|---:|
+| release1 | +28.75 / +28.26 / +28.35% | +28.45% | +30.35% | 3.19% |
+| **release2** | +28.28 / +30.23 / +29.20% | **+29.24%** | +29.97% | 1.66% |
+| release3 | +31.27 / +31.40 / +28.80% | +30.49% | +31.58% | 12.44% |
+
+I chose `release2` for the headline because it has the smallest OFF drift and no uncertainty flag on its population adjustment. The three series are one session at one place, not independent sessions; their spread shows within-session variation only.
+
+### Players in the scene and the population adjustment
+
+Players walk in and out, so the number of rendered player models changes between phases (8–11 in `release2`). No avatar count was stable in every phase, so the exact population-matched comparison was not possible in any series. The report therefore also gives a regression-based adjustment: a common within-phase slope of frame time per rendered player model (`release2`: 0.133 ± 0.032 ms per model) shifts every phase to the series' mean population. It moves the result by +0.7 to +1.9 percentage points in the three series. It is a descriptive correction for this one variable, not a model of the scene; the raw paired change stays the headline.
+
+In `release3` the last OFF phase drops to 159.56 FPS after the scene changed (10 player models from that point on). That series has the largest OFF drift (12.44%), and its report flags the adjusted pairs as rough: the uncertainty of the population shift reaches 1.16% of a phase's frame time. It is kept and reported, not removed.
+
+| Phase (`release2`) | Item Displays min–max | Bone carriers min–max | Loaded particles min–max | Loaded players min–max | Rendered player models min–max |
+|---|---:|---:|---:|---:|---:|
+| OFF1 | 426–426 | 312–312 | 1668–1807 | 9–10 | 8–9 |
+| ON1 | 426–438 | 312–323 | 1714–1834 | 9–10 | 8–9 |
+| OFF2 | 426–438 | 312–323 | 1625–1730 | 10–12 | 8–9 |
+| ON2 | 438–438 | 323–323 | 1587–1769 | 11–12 | 8–10 |
+| OFF3 | 426–438 | 312–323 | 1571–1805 | 10–11 | 9–10 |
+| ON3 | 426–426 | 312–312 | 1641–1812 | 11–12 | 10–11 |
+| OFF4 | 426–426 | 312–312 | 1606–1823 | 10–11 | 9–10 |
+
+Rendered player models are avatar render states (players and mannequins) after frustum culling, sampled over every measured frame between one-second samples; loaded players include me. The Item Display population changes by 12 entries during `release2`, above the 2% screening threshold. Particle counts fluctuate naturally. No samples were selected by population to replace the full-phase result.
+
+### Review findings and limitations
+
+- One scene, one session, one machine. No confidence interval, independent-session repeat, p95/p99, 1% low or GPU elapsed time is available.
+- The FPS limit was 260. Per-second ON values reached at most 252 FPS, below the limit, but a limit close to the measured values can still trim individual frames.
+- AFK frame throttling was paused by the series and restored afterwards.
+- The result is for the whole of DrawLess at its defaults; it does not separate Item Display, player, particle and batching contributions.
+- No synchronized pixel comparison was taken in this series.
+
+### Artifact and environment
+
+- Recorded 2026-10-31, 22:10–22:18 Europe/Moscow (UTC+03:00). Dimension `minecraft:spawn/overworld-41f2`; camera `-8.79 / 100.62 / -5.55`, yaw/pitch `112.47 / 4.27`, unchanged in all 420 samples; first person, FOV 110, render distance 7, GUI scale 2.
+- Framebuffer 1920×1129, FPS limit 260, VSync OFF, resource packs `vanilla` and a server resource pack, detailed profiler OFF. All phases completed with 20 samples, zero excluded menu frames and zero unfocused measured frames.
+- Artifact: `drawless-1.3.0.jar`; SHA-256 `a3a717007d1cb78096f48916a6aaf39693e6415d319b079a975c0e1d38c8038b`. Source: `13eda58ba949e6bf145b2a720e175cd1e686913d`.
+- Minecraft 26.2, Fabric Loader 0.20.0, Fabric API 0.161.0+26.2, Sodium 0.9.2+mc26.2, Java 25.0.4. AMD Ryzen 5 5600H; NVIDIA GeForce RTX 3060 Laptop GPU (hardware from the current system inventory, not from the series files).
+- Settings before each series were the 1.3.0 defaults; each series restored them afterwards.
+
+### Raw measurements and hashes
+
+Original files of all three series, byte-for-byte: [`results/spawn-20261031/raw/`](results/spawn-20261031/raw/), with SHA-256 for every file in [`SHA256SUMS.txt`](results/spawn-20261031/raw/SHA256SUMS.txt). Each series folder holds its generated summary (`README.md`, `summary.json`) and the seven phase reports.
+
+| Phase (`release2`) | Original file | SHA-256 |
+|---|---|---|
+| OFF1 | [drawless-20261031-221329-204-release2_off1.md](results/spawn-20261031/raw/benchmark-20261031-221307-194-release2/drawless-20261031-221329-204-release2_off1.md) | `8a3558c7e54f62423357a881e42e6f97cb17d82e915f91a739c62ec7720c120c` |
+| ON1 | [drawless-20261031-221351-214-release2_on1.md](results/spawn-20261031/raw/benchmark-20261031-221307-194-release2/drawless-20261031-221351-214-release2_on1.md) | `1ef4a018cd0959d4b9de2c516e5ef62b74fcc9ad3f9d3e9f937a7f0d3002be2e` |
+| OFF2 | [drawless-20261031-221413-225-release2_off2.md](results/spawn-20261031/raw/benchmark-20261031-221307-194-release2/drawless-20261031-221413-225-release2_off2.md) | `826095e42e66ab97f4e4172dd6e065557afd9dab615fe608e960406e5b8aaeeb` |
+| ON2 | [drawless-20261031-221435-234-release2_on2.md](results/spawn-20261031/raw/benchmark-20261031-221307-194-release2/drawless-20261031-221435-234-release2_on2.md) | `7f7457c7aecc0664d2c4ce9b77d4618d68cf0b19c089c8aa2ff78cf9ea3b5d0e` |
+| OFF3 | [drawless-20261031-221457-248-release2_off3.md](results/spawn-20261031/raw/benchmark-20261031-221307-194-release2/drawless-20261031-221457-248-release2_off3.md) | `5bba1082d04ed51069fa68475abc55373971039022d56eb3891471f112500914` |
+| ON3 | [drawless-20261031-221519-260-release2_on3.md](results/spawn-20261031/raw/benchmark-20261031-221307-194-release2/drawless-20261031-221519-260-release2_on3.md) | `e9aa98202d034a998224459a20d7d7f333cf233fb196c0789340bffbb11696b6` |
+| OFF4 | [drawless-20261031-221541-268-release2_off4.md](results/spawn-20261031/raw/benchmark-20261031-221307-194-release2/drawless-20261031-221541-268-release2_off4.md) | `709b0ad779085fbf1af7ffe110f72efa38d9981180fefd13aaad0d8702c4a619` |
+
+---
 
 ## Benchmark 02 — animated Item Display spawn
 
