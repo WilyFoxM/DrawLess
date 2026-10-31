@@ -50,7 +50,7 @@ Recorded 2026-10-17, 15:51–15:54 Europe/Moscow (UTC+03:00). PrisonEvo-1 #5; di
 
 ON3 has four samples with 438 Item Displays and sixteen with 426. Counts of bone carriers do not prove animated-bone counts or identical visible workload. Particle populations fluctuate naturally; ON does not consistently have fewer particles. No samples were selected by population to replace the full-phase result.
 
-The operator confirmed unchanged appearance in every ON phase, unchanged resources, unlimited FPS, VSync OFF, a maximized window, AC power and Performance mode. This is a visual observation, not synchronized pixel parity. Known controlled EXPANDED counterexamples can change overlapping alpha or opaque layers; no universal layer equivalence is claimed.
+I confirmed unchanged appearance in every ON phase, unchanged resources, unlimited FPS, VSync OFF, a maximized window, AC power and Performance mode. This is my visual observation, not synchronized pixel parity. Known controlled EXPANDED counterexamples can change overlapping alpha or opaque layers; no universal layer equivalence is claimed.
 
 ### Measured Live geometry costs
 
@@ -143,7 +143,7 @@ Bone-carrier count does not mean every carrier is an animated bone. Rounded
 camera samples and object counts do not establish continuous camera immobility
 or identical visible output.
 
-The operator observed unchanged NPC appearance, animation, lighting and visible
+I saw unchanged NPC appearance, animation, lighting and visible
 parts in every ON phase. NPC pose budgeting, tick pausing, particle-light and
 particle-collision experiments were OFF. This is an observation and supporting
 counter evidence, not a synchronized pixel-parity test.
@@ -190,7 +190,7 @@ Tracked buffers are not total GPU memory; traffic per frame is not retained VRAM
   0.161.0+26.2, DrawLess 0.1.0, Sodium 0.9.2+mc26.2; no ImmediatelyFast.
 - GPU/driver from that log: NVIDIA GeForce RTX 3060 Laptop GPU, NVIDIA 610.62, OpenGL.
 - CPU from system inventory at analysis: AMD Ryzen 5 5600H; nominal 32 GB system RAM.
-- Operator-confirmed: maximized window, unlimited FPS, VSync OFF, AC power,
+- Confirmed by me during the run: maximized window, unlimited FPS, VSync OFF, AC power,
   Performance mode.
 - Java major version 25 is logged. Exact Java build, JVM heap/arguments, framebuffer
   dimensions, full graphics preset and resource-pack version at measurement were
