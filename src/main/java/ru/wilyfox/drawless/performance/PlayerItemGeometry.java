@@ -392,7 +392,7 @@ public final class PlayerItemGeometry {
             + "instancesTotal=%d; drawsTotal=%d; itemMeshes=%d; itemMeshBuilds=%d; "
             + "indexRebuilds=%d; instanceUploadedBytes=%d; capture=%.4fms; upload=%.4fms; "
             + "drawCpu=%.4fms; captureTotalMs=%.4f; uploadTotalMs=%.4f; drawTotalMs=%.4f; "
-            + "fallback=%s",
+            + "%s; fallback=%s",
         enabled ? "on" : blocked.isEmpty() ? "idle" : blocked,
         framePieces,
         frameFallbackPieces,
@@ -416,6 +416,7 @@ public final class PlayerItemGeometry {
         captureNanosTotal / 1e6,
         uploadNanosTotal / 1e6,
         drawNanosTotal / 1e6,
+        ItemMeshes.diagnostic(),
         reasonText.isEmpty() ? "none" : reasonText);
   }
 

@@ -28,12 +28,21 @@ import ru.wilyfox.drawless.diagnostics.RenderMetrics;
  * #forContent}). Value: one local mesh per material (item RenderType, tint index, light emission)
  * in one shared texel buffer, or a remembered refusal (transparency, unsupported pipeline).
  * Lifetime: until resource reload, world change, disconnect, client stop, or the frame no consumer
- * requests meshes. Render thread only. Limits: vertex and key counts are bounded; a full store
- * refuses (capacity) rather than evicts. Consumers keep their own frame instance lists and turn off
- * independently; a consumer's runtime failure does not clear meshes.
+ * requests meshes. Render thread only. Limits: vertex and key counts are bounded. A lookup that
+ * hits a limit is refused (capacity) for that frame and requests eviction; at the start of the next
+ * frame, before any consumer captures, keys unused for {@link #evictAfterNanos} are dropped and the
+ * surviving meshes are compacted into new Mesh objects. Every compaction advances {@link
+ * #generation()}: a consumer holding meshes across frames must drop them when it changes. Consumers
+ * keep their own frame instance lists and turn off independently; a consumer's runtime failure does
+ * not clear meshes.
  */
 final class ItemMeshes {
   private static final int MAX_MESHES = 4096, MAX_ALIASES = 8192;
+  private static final long RETRY_NANOS = 5_000_000_000L;
+
+  /** Age after which an unused key may be evicted under pressure; adjustable by local tests. */
+  static long evictAfterNanos = 30_000_000_000L;
+
   private static final Identifier ITEM_SHADER = Identifier.withDefaultNamespace("core/item");
   private static final Identifier VERTEX_SHADER =
       Identifier.fromNamespaceAndPath("drawless", "core/live_item");
@@ -50,8 +59,10 @@ final class ItemMeshes {
   private static ClientLevel level;
   private static boolean registered, checked;
   private static String blocked = "";
-  private static int meshCount, buildsThisFrame, keyQuads;
-  private static long meshBuilds, buildNanos;
+  private static int meshCount, buildsThisFrame, keyQuads, generation;
+  private static long meshBuilds, buildNanos, now, nextCompaction;
+  private static long compactions, evictedKeys;
+  private static boolean pressure;
 
   private ItemMeshes() {}
 
@@ -82,6 +93,59 @@ final class ItemMeshes {
     }
     buildsThisFrame = 0;
     buildNanos = 0;
+    now = System.nanoTime();
+    if (pressure && now >= nextCompaction) compact();
+  }
+
+  /**
+   * Drops keys unused for {@link #evictAfterNanos} and moves the surviving vertices to the front.
+   * Surviving keys get new Geometry and Mesh objects, so retained index buffers rebuild themselves
+   * and no consumer can keep a stale vertex range.
+   */
+  private static void compact() {
+    pressure = false;
+    long cutoff = now - evictAfterNanos;
+    var survivors = new ArrayList<Map.Entry<Object, Geometry>>();
+    for (var entry : geometries.entrySet())
+      if (entry.getValue().lastUsed >= cutoff) survivors.add(entry);
+    if (survivors.size() == geometries.size()) {
+      nextCompaction = now + RETRY_NANOS;
+      return;
+    }
+    long start = System.nanoTime();
+    var meshes = new ArrayList<Mesh>();
+    for (var entry : survivors) meshes.addAll(entry.getValue().meshes);
+    meshes.sort(Comparator.comparingInt((Mesh mesh) -> mesh.firstVertex));
+    var firsts = new int[meshes.size()];
+    var counts = new int[meshes.size()];
+    for (int i = 0; i < firsts.length; i++) {
+      firsts[i] = meshes.get(i).firstVertex;
+      counts[i] = meshes.get(i).vertexCount;
+    }
+    var moved = buffer.compact(firsts, counts);
+    var relocated = new IdentityHashMap<Mesh, Mesh>(meshes.size());
+    for (int i = 0; i < firsts.length; i++)
+      relocated.put(meshes.get(i), meshes.get(i).at(moved[i]));
+    var replaced = new IdentityHashMap<Geometry, Geometry>(survivors.size());
+    evictedKeys += geometries.size() - survivors.size();
+    geometries.clear();
+    keyQuads = 0;
+    for (var entry : survivors) {
+      var old = entry.getValue();
+      var next = new ArrayList<Mesh>(old.meshes.size());
+      for (var mesh : old.meshes) next.add(relocated.get(mesh));
+      var geometry = new Geometry(old.status, List.copyOf(next));
+      geometry.lastUsed = old.lastUsed;
+      replaced.put(old, geometry);
+      geometries.put(entry.getKey(), geometry);
+      keyQuads += ((QuadKey) entry.getKey()).quads.length;
+    }
+    aliases.entrySet().removeIf(alias -> !replaced.containsKey(alias.getValue()));
+    aliases.replaceAll((list, geometry) -> replaced.get(geometry));
+    meshCount = meshes.size();
+    generation++;
+    compactions++;
+    nextCompaction = now + RETRY_NANOS;
   }
 
   /** Empty when meshes can be built; otherwise a stable fallback reason. Checked once per store. */
@@ -121,10 +185,12 @@ final class ItemMeshes {
     geometries.clear();
     buffer.close();
     level = null;
-    checked = false;
+    checked = pressure = false;
     blocked = "";
     meshCount = buildsThisFrame = keyQuads = 0;
-    meshBuilds = buildNanos = 0;
+    meshBuilds = buildNanos = nextCompaction = compactions = evictedKeys = 0;
+    // Every mesh object is gone: holders from before the clear must not match a later store.
+    generation++;
   }
 
   /** Resource reload replaces baked quads and sprites; pipelines follow the device. */
@@ -139,15 +205,14 @@ final class ItemMeshes {
    */
   static Geometry forImmutable(List<BakedQuad> quads) {
     var cached = aliases.get(quads);
-    if (cached != null) return cached;
-    if (aliases.size() >= MAX_ALIASES
-        || quads.size() > 16384
-        || keyQuads + (long) quads.size() > 1_048_576) return Geometry.CAPACITY;
+    if (cached != null) return used(cached);
+    if (quads.size() > 16384) return Geometry.CAPACITY;
+    if (aliases.size() >= MAX_ALIASES || keyQuads + (long) quads.size() > 1_048_576) return full();
     var key = new QuadKey(quads);
     cached = geometries.get(key);
     if (cached != null) {
       aliases.put(quads, cached);
-      return cached;
+      return used(cached);
     }
     return build(key, quads, quads);
   }
@@ -161,11 +226,11 @@ final class ItemMeshes {
     probe.quads = quads;
     try {
       var cached = geometries.get(probe);
-      if (cached != null) return cached;
+      if (cached != null) return used(cached);
     } finally {
       probe.quads = null;
     }
-    if (keyQuads + (long) quads.size() > 1_048_576) return Geometry.CAPACITY;
+    if (keyQuads + (long) quads.size() > 1_048_576) return full();
     return build(new QuadKey(quads), quads, null);
   }
 
@@ -197,8 +262,9 @@ final class ItemMeshes {
                 k -> new ArrayList<>())
             .add(quad);
       }
+      // A full store is not remembered as a refusal: eviction may make room next frame.
       if (meshCount + grouped.size() > MAX_MESHES || !buffer.fits((long) quads.size() * 4))
-        return remember(key, alias, Geometry.CAPACITY);
+        return full();
       // Compile before accepting a single part; shader errors cannot make the vanilla model vanish.
       for (var material : grouped.keySet()) pipeline(material.type.pipeline());
       buffer.begin(quads.size() * 4);
@@ -234,11 +300,43 @@ final class ItemMeshes {
   }
 
   private static Geometry remember(QuadKey key, List<BakedQuad> alias, Geometry geometry) {
-    if (geometries.size() >= MAX_MESHES) return Geometry.CAPACITY;
+    if (geometries.size() >= MAX_MESHES) return full();
+    // Refusals are per key too, so they age and can be evicted like meshes.
+    if (geometry.status != Status.READY) geometry = new Geometry(geometry.status, List.of());
+    used(geometry);
     geometries.put(key, geometry);
     keyQuads += key.quads.length;
     if (alias != null) aliases.put(alias, geometry);
     return geometry;
+  }
+
+  private static Geometry used(Geometry geometry) {
+    geometry.lastUsed = now;
+    return geometry;
+  }
+
+  private static Geometry full() {
+    pressure = true;
+    return Geometry.CAPACITY;
+  }
+
+  /** Advances whenever existing Mesh objects stop being valid (compaction or clear). */
+  static int generation() {
+    return generation;
+  }
+
+  static String diagnostic() {
+    return String.format(
+        Locale.ROOT,
+        "itemStoreKeys=%d; itemStoreMeshes=%d; itemStoreVertices=%d/%d; itemStoreGeneration=%d; "
+            + "itemStoreCompactions=%d; itemStoreEvictedKeys=%d",
+        geometries.size(),
+        meshCount,
+        buffer.vertices(),
+        buffer.max(),
+        generation,
+        compactions,
+        evictedKeys);
   }
 
   /** Derived pipeline for an item RenderType already admitted by {@link #forImmutable}. */
@@ -346,6 +444,11 @@ final class ItemMeshes {
       this.sprites = sprites;
     }
 
+    /** The same material at another place in the buffer, as a new object. */
+    Mesh at(int first) {
+      return new Mesh(type, first, vertexCount, tint, emission, sprites);
+    }
+
     @Override
     public int firstVertex() {
       return firstVertex;
@@ -357,11 +460,30 @@ final class ItemMeshes {
     }
   }
 
-  record Geometry(Status status, List<Mesh> meshes) {
+  static final class Geometry {
     static final Geometry TRANSPARENT = new Geometry(Status.TRANSPARENT, List.of()),
         UNSUPPORTED = new Geometry(Status.UNSUPPORTED, List.of()),
         WARMING = new Geometry(Status.WARMING, List.of()),
         CAPACITY = new Geometry(Status.CAPACITY, List.of());
+
+    final Status status;
+    final List<Mesh> meshes;
+
+    /** {@link System#nanoTime()} of the frame that last looked this key up. */
+    long lastUsed;
+
+    Geometry(Status status, List<Mesh> meshes) {
+      this.status = status;
+      this.meshes = meshes;
+    }
+
+    Status status() {
+      return status;
+    }
+
+    List<Mesh> meshes() {
+      return meshes;
+    }
   }
 
   /** Full sequence equality is only needed on a new list identity, never on a warm frame. */

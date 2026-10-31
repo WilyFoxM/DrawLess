@@ -58,7 +58,7 @@ public final class LiveDisplayGeometry {
   private static boolean registered, enabled, checked, all;
   private static ExtremeDisplayMode liveMode;
   private static String blocked = "off";
-  private static int frame, generation;
+  private static int frame, generation, storeGeneration;
   private static long indexRebuilds, instanceUploadedBytes;
   private static long instances, quads, draws, fallbacks, indexBytes;
   private static long captureNanos, uploadNanos, drawNanos;
@@ -130,6 +130,11 @@ public final class LiveDisplayGeometry {
   public static void beginFrame(Minecraft client) {
     // Called every level frame, so it is also the shared item store's frame hook for all consumers.
     ItemMeshes.beginFrame(client);
+    // Cached parts hold instances of meshes that a compaction or clear has replaced.
+    if (storeGeneration != ItemMeshes.generation()) {
+      storeGeneration = ItemMeshes.generation();
+      parts.clear();
+    }
     if (!requested() || client.level == null) {
       if (world != null) clear();
       return;
@@ -442,6 +447,8 @@ public final class LiveDisplayGeometry {
             entityLoopNanos / 1e6,
             entityLoopTotal / 1e6,
             entityLoopFrames)
+        + "; "
+        + ItemMeshes.diagnostic()
         + "; "
         + DisplayExtractionCache.diagnostic();
   }

@@ -58,6 +58,27 @@ final class RetainedGeometryBuffer implements AutoCloseable {
     vertices++;
   }
 
+  /**
+   * Moves the given vertex ranges to the front, in ascending source order, and drops every other
+   * vertex. {@code firsts} must be sorted ascending and ranges must not overlap; returns the new
+   * first vertex of each range. The whole buffer is uploaded again on the next {@link #upload()}.
+   */
+  int[] compact(int[] firsts, int[] counts) {
+    var moved = new int[firsts.length];
+    int next = 0;
+    for (int i = 0; i < firsts.length; i++) {
+      // Same-buffer absolute bulk put behaves as if copied through a temporary: overlap is safe.
+      if (firsts[i] != next)
+        data.put(next * VERTEX_BYTES, data, firsts[i] * VERTEX_BYTES, counts[i] * VERTEX_BYTES);
+      moved[i] = next;
+      next += counts[i];
+    }
+    vertices = next;
+    uploaded = 0;
+    if (data != null) data.position(vertices * VERTEX_BYTES);
+    return moved;
+  }
+
   void upload() {
     if (vertices == uploaded) return;
     int size = vertices * VERTEX_BYTES;
