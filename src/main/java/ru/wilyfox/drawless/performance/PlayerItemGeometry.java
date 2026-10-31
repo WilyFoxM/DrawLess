@@ -16,7 +16,9 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
+import net.minecraft.client.renderer.rendertype.OutputTarget;
 import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.util.LightCoordsUtil;
@@ -32,9 +34,11 @@ import ru.wilyfox.drawless.config.DrawLessConfig;
  *
  * <p>One item stack is one piece: all of its quad layers are retained, or every layer is replayed
  * through the ordinary submit operations in its original order while submission is still open.
- * Coplanar overlay layers therefore never split between paths. Glint, outlines, special renderers
- * and blended or unsupported materials keep the whole stack ordinary. GUI previews and first-person
- * hands are outside level entity submission and never captured.
+ * Coplanar overlay layers therefore never split between paths. Standard glint is retained with its
+ * layer: a second instance of the same mesh draws with the glint pipeline after every base, at
+ * EQUAL depth. Special foil, outlines, special renderers and blended or unsupported materials keep
+ * the whole stack ordinary. GUI previews and first-person hands are outside level entity submission
+ * and never captured.
  */
 public final class PlayerItemGeometry {
   private static final String LABEL = "DrawLess retained player items";
@@ -54,6 +58,7 @@ public final class PlayerItemGeometry {
   private static String blocked = "off";
   private static int layerDepth, pendingCount;
   private static int frameInstances, frameSubmits, framePieces, frameFallbackPieces, frameDraws;
+  private static int frameGlintInstances;
   private static long indexRebuilds, instanceUploadedBytes;
   private static long framesTotal, piecesTotal, fallbackPiecesTotal, submitsTotal, instancesTotal;
   private static long drawsTotal, captureNanosTotal, uploadNanosTotal, drawNanosTotal;
@@ -240,7 +245,10 @@ public final class PlayerItemGeometry {
       int[] tints,
       List<BakedQuad> quads,
       ItemStackRenderState.FoilType foil) {
-    if (foil != ItemStackRenderState.FoilType.NONE) return Reason.FOIL;
+    // Special foil derives decal UVs from the pose on the CPU; standard glint reuses quad UVs.
+    if (foil == ItemStackRenderState.FoilType.SPECIAL) return Reason.FOIL_SPECIAL;
+    boolean glint = foil == ItemStackRenderState.FoilType.STANDARD;
+    if (glint && ItemMeshes.glintPipeline(Minecraft.getInstance()) == null) return Reason.GLINT;
     if (outline != 0) return Reason.OUTLINE;
     var last = pose.last();
     if (!last.pose().isFinite() || !last.normal().isFinite()) return Reason.POSE;
@@ -261,7 +269,7 @@ public final class PlayerItemGeometry {
       }
     }
     for (var mesh : geometry.meshes()) {
-      var batch = batch(mesh.type);
+      var batch = batch(mesh.type, 0);
       var instance = batch == null ? null : batch.next(RetainedInstance::new);
       if (instance == null) return Reason.CAPACITY;
       int color = mesh.tint >= 0 && mesh.tint < tints.length ? tints[mesh.tint] : -1;
@@ -272,11 +280,27 @@ public final class PlayerItemGeometry {
           LightCoordsUtil.lightCoordsWithEmission(light, mesh.emission),
           overlay);
       if (SODIUM) animated.addAll(mesh.sprites);
+      if (glint) {
+        // Same mesh and transform: the glint pass tests EQUAL depth against this instance.
+        var glintBatch = batch(glintType(mesh.type), 1);
+        var copy = glintBatch == null ? null : glintBatch.next(RetainedInstance::new);
+        if (copy == null) return Reason.CAPACITY;
+        copy.copy(instance, mesh, -1, instance.light, overlay);
+      }
     }
     return Reason.READY;
   }
 
-  private static Batch batch(RenderType type) {
+  /** Vanilla's choice: translucent glint follows bases drawn into the item-entity target. */
+  private static RenderType glintType(RenderType base) {
+    return base.outputTarget() == OutputTarget.ITEM_ENTITY_TARGET
+            && Minecraft.getInstance().gameRenderer.gameRenderState().useShaderTransparency()
+        ? RenderTypes.glintTranslucent()
+        : RenderTypes.glint();
+  }
+
+  /** {@code rank}: 0 for base materials, 1 for glint, which draws after every base. */
+  private static Batch batch(RenderType type, int rank) {
     var list = batches.computeIfAbsent(type, k -> new ArrayList<>(1));
     Batch found = null;
     for (var batch : list)
@@ -286,7 +310,7 @@ public final class PlayerItemGeometry {
       }
     if (found == null) {
       if (list.size() >= 8) return null;
-      found = new Batch(type);
+      found = new Batch(type, rank);
       list.add(found);
     }
     if (found.used == 0 && !active.contains(found)) active.add(found);
@@ -305,14 +329,19 @@ public final class PlayerItemGeometry {
   private static void draw(LevelRenderContext context) {
     // Stacks withheld before a mid-frame block were never submitted to vanilla: still draw them.
     if (world == null || world != Minecraft.getInstance().level) return;
-    frameInstances = 0;
-    for (var batch : active) frameInstances += batch.used;
+    frameInstances = frameGlintInstances = 0;
+    for (var batch : active) {
+      frameInstances += batch.used;
+      if (batch.rank > 0) frameGlintInstances += batch.used;
+    }
     drawn = true;
     if (frameInstances == 0) return;
     long start = System.nanoTime();
     var matrix = RenderSystem.getModelViewStack();
     matrix.pushMatrix();
     try {
+      // Vanilla prepares every main layer of a group before any foil layer; the sort is stable.
+      active.sort(Comparator.comparingInt((Batch batch) -> batch.rank));
       ItemMeshes.upload();
       for (var batch : active)
         if (batch.used > 0) {
@@ -357,7 +386,8 @@ public final class PlayerItemGeometry {
       }
     return String.format(
         Locale.ROOT,
-        "status=%s; pieces=%d; fallbackPieces=%d; submits=%d; instances=%d; draws=%d; "
+        "status=%s; pieces=%d; fallbackPieces=%d; submits=%d; instances=%d; "
+            + "glintInstances=%d; draws=%d; "
             + "framesTotal=%d; piecesTotal=%d; fallbackPiecesTotal=%d; submitsTotal=%d; "
             + "instancesTotal=%d; drawsTotal=%d; itemMeshes=%d; itemMeshBuilds=%d; "
             + "indexRebuilds=%d; instanceUploadedBytes=%d; capture=%.4fms; upload=%.4fms; "
@@ -368,6 +398,7 @@ public final class PlayerItemGeometry {
         frameFallbackPieces,
         frameSubmits,
         frameInstances,
+        frameGlintInstances,
         frameDraws,
         framesTotal,
         piecesTotal,
@@ -390,7 +421,8 @@ public final class PlayerItemGeometry {
 
   private enum Reason {
     READY("ready"),
-    FOIL("foil"),
+    FOIL_SPECIAL("foil-special"),
+    GLINT("glint-pipeline"),
     OUTLINE("outline"),
     SPECIAL("special-renderer"),
     POSE("pose"),
@@ -406,10 +438,12 @@ public final class PlayerItemGeometry {
   }
 
   private static final class Batch extends RetainedBatch<RetainedInstance> {
+    final int rank;
     int pieceStart;
 
-    Batch(RenderType type) {
+    Batch(RenderType type, int rank) {
       super(type, LABEL, 4096);
+      this.rank = rank;
     }
   }
 
