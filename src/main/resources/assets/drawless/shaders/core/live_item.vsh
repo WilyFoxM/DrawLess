@@ -6,6 +6,10 @@
 #moj_import <minecraft:projection.glsl>
 #moj_import <minecraft:sample_lightmap.glsl>
 
+// Retained item glint tests EQUAL depth against these positions; live_armor_glint.vsh computes
+// gl_Position with the same invariant expression.
+invariant gl_Position;
+
 uniform samplerBuffer FHGeometry;
 uniform usamplerBuffer FHInstances;
 uniform sampler2D Sampler1;

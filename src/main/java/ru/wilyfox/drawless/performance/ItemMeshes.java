@@ -11,6 +11,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.builders.UVPair;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
@@ -36,6 +37,10 @@ final class ItemMeshes {
   private static final Identifier ITEM_SHADER = Identifier.withDefaultNamespace("core/item");
   private static final Identifier VERTEX_SHADER =
       Identifier.fromNamespaceAndPath("drawless", "core/live_item");
+  private static final Identifier GLINT_SHADER = Identifier.withDefaultNamespace("core/glint");
+  // Decodes the shared mesh/instance layout; its position expression matches live_item.vsh.
+  private static final Identifier GLINT_VERTEX =
+      Identifier.fromNamespaceAndPath("drawless", "core/live_armor_glint");
   private static final IdentityHashMap<List<BakedQuad>, Geometry> aliases = new IdentityHashMap<>();
   private static final HashMap<Object, Geometry> geometries = new HashMap<>();
   private static final Probe probe = new Probe();
@@ -97,12 +102,18 @@ final class ItemMeshes {
     if (!RenderSystem.getDevice().getDeviceInfo().backendName().equals("OpenGL"))
       return "unsupported-backend";
     if (RenderModSupport.IRIS) return "iris-vanilla-fallback";
-    for (String file : List.of("shaders/core/item.vsh", "shaders/core/item.fsh")) {
+    if (!vanilla(client, "shaders/core/item.vsh", "shaders/core/item.fsh"))
+      return "custom-item-shader";
+    return "";
+  }
+
+  private static boolean vanilla(Minecraft client, String... files) {
+    for (String file : files) {
       var resource = client.getResourceManager().getResource(Identifier.withDefaultNamespace(file));
       if (resource.isEmpty() || !resource.get().source().equals(client.getVanillaPackResources()))
-        return "custom-item-shader";
+        return false;
     }
-    return "";
+    return true;
   }
 
   static void clear() {
@@ -238,6 +249,23 @@ final class ItemMeshes {
     if (result == null)
       throw new IllegalStateException("Live Item Display shader could not compile");
     return result;
+  }
+
+  /**
+   * Glint variant over retained item meshes, shared by every glint RenderType of items (they differ
+   * only in texture, texturing and output target). Null when glint must stay ordinary: a resource
+   * pack replaced the glint shader, or the pipeline was refused or failed to compile.
+   */
+  static RenderPipeline glintPipeline(Minecraft client) {
+    var base = RenderPipelines.GLINT;
+    if (pipelines.known(base)) return pipelines.get(base);
+    if (!vanilla(client, "shaders/core/glint.vsh", "shaders/core/glint.fsh")
+        || !base.getVertexShader().equals(GLINT_SHADER)
+        || !base.getFragmentShader().equals(GLINT_SHADER)
+        || !base.getShaderDefines().flags().isEmpty()
+        || !base.getShaderDefines().values().isEmpty()) return pipelines.reject(base);
+    var result = pipelines.compile(base, GLINT_VERTEX);
+    return result == null ? pipelines.reject(base) : result;
   }
 
   static RetainedPipelines pipelines() {

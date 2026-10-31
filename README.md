@@ -15,8 +15,8 @@ repeated rendering work while keeping movement, animation and lighting live.
 - Particle lighting and empty-collision optimizations, enabled by default for new settings.
 - Player armor kept on the GPU: armor layers, trims and enchantment glint are drawn
   in a few calls instead of being rebuilt every frame.
-- Items held and worn on the head by players kept on the GPU, sharing item models with
-  Item Displays; enchanted, glowing and translucent items keep vanilla rendering.
+- Items held and worn on the head by players kept on the GPU, including enchantment glint,
+  sharing item models with Item Displays; glowing and translucent items keep vanilla rendering.
 - Optional text/name-tag buffer reuse; each optimization has its own switch.
 - A searchable settings menu with English and Russian translations.
 
