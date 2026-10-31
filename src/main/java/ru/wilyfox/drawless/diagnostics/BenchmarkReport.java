@@ -26,7 +26,7 @@ final class BenchmarkReport {
       List<DisplayProbe.Result> runs) {
     var gson = new GsonBuilder().setPrettyPrinting().create();
     var json = new JsonObject();
-    json.addProperty("schema_version", 1);
+    json.addProperty("schema_version", 2);
     json.addProperty("label", label);
     json.addProperty("result", reason);
     json.addProperty("target", target);
@@ -60,7 +60,8 @@ final class BenchmarkReport {
     }
     json.add("phases", phases);
     var warnings = new ArrayList<>(environmentWarnings);
-    List<BracketedComparison.Pair> pairs = List.of();
+    List<BracketedComparison.Pair> pairs = List.of(), matchedPairs = List.of();
+    PopulationMatch.Result match = null;
     boolean complete =
         reason.equals("complete") && runs.size() == BracketedComparison.phases(brackets);
     if (complete) {
@@ -81,6 +82,20 @@ final class BenchmarkReport {
         warnings.add("One bracketed ON run is exploratory; repeat independent sessions.");
       populationWarning(runs, warnings, true);
       populationWarning(runs, warnings, false);
+      match =
+          PopulationMatch.match(
+              runs.stream()
+                  .map(r -> r.samples().stream().map(DisplayProbe.Sample::population).toList())
+                  .toList());
+      matchedPairs = populationMatchWarning(match, warnings);
+      json.add("population_match", gson.toJsonTree(match));
+      if (!matchedPairs.isEmpty())
+        json.addProperty(
+            "mean_population_matched_change_percent",
+            matchedPairs.stream()
+                .mapToDouble(BracketedComparison.Pair::changePercent)
+                .average()
+                .orElseThrow());
       particlePopulationWarning(runs, warnings, target.startsWith("particle"));
       if (target.equals("player_armor")) playerArmorWarning(runs, warnings);
       json.addProperty(
@@ -96,6 +111,7 @@ final class BenchmarkReport {
     warnings.add(
         "Particle stage timings are CPU-only; encoding is nested in preparation. Shared upload and GPU execution are not isolated.");
     json.add("pairs", gson.toJsonTree(pairs));
+    json.add("population_matched_pairs", gson.toJsonTree(matchedPairs));
     json.add("review_flags", gson.toJsonTree(warnings));
     json.addProperty("publication_status", "manual_review_required");
     var out =
@@ -149,6 +165,50 @@ final class BenchmarkReport {
                 pair.onFps(),
                 pair.changePercent()));
     }
+    if (match != null) {
+      out.append(
+              "\n## Population-matched comparison\n\nWindows are the one-second intervals between samples. A window is stable when every measured frame rendered the same number of avatars (players and mannequins). Only avatar counts seen in stable windows of every phase are used; each phase's mean frame time is weighted per count with weights shared by all phases. Unmatched windows remain in the raw results above.\n\nCommon avatar counts: ")
+          .append(match.commonAvatarCounts().isEmpty() ? "none" : match.commonAvatarCounts())
+          .append(
+              ".\n\n| Phase | Windows | Stable | Matched | Matched seconds | Mean matched avatars | Standardized FPS |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: |\n");
+      for (int i = 0; i < runs.size(); i++) {
+        var phase = match.phases().get(i);
+        out.append(
+            String.format(
+                Locale.ROOT,
+                "| %s | %d | %d | %d | %.2f | %.2f | %s |\n",
+                runs.get(i).label(),
+                phase.windows(),
+                phase.stableWindows(),
+                phase.matchedWindows(),
+                phase.matchedSeconds(),
+                phase.meanMatchedAvatars(),
+                phase.standardizedFps() > 0
+                    ? String.format(Locale.ROOT, "%.2f", phase.standardizedFps())
+                    : "–"));
+      }
+      if (!matchedPairs.isEmpty()) {
+        out.append(
+            "\n| ON phase | Neighboring OFF standardized FPS | ON standardized FPS | Change |\n| ---: | ---: | ---: | ---: |\n");
+        for (var pair : matchedPairs)
+          out.append(
+              String.format(
+                  Locale.ROOT,
+                  "| %d | %.2f | %.2f | %+.2f%% |\n",
+                  pair.onPhase(),
+                  pair.baselineFps(),
+                  pair.onFps(),
+                  pair.changePercent()));
+        out.append(
+            String.format(
+                Locale.ROOT,
+                "\nMean population-matched change: **%+.2f%%**.\n",
+                matchedPairs.stream()
+                    .mapToDouble(BracketedComparison.Pair::changePercent)
+                    .average()
+                    .orElseThrow()));
+      }
+    }
     out.append("\n## Review flags\n\n");
     warnings.forEach(w -> out.append("- ").append(w).append('\n'));
     out.append("\n## Environment\n\n")
@@ -182,6 +242,33 @@ final class BenchmarkReport {
               + "–"
               + values.getMax()
               + ". Review scene comparability.");
+  }
+
+  /** Pairs on standardized FPS, or none with a flag saying why no matched claim is made. */
+  static List<BracketedComparison.Pair> populationMatchWarning(
+      PopulationMatch.Result match, List<String> warnings) {
+    if (match.commonAvatarCounts().isEmpty()) {
+      warnings.add(
+          "No rendered avatar count was stable in every phase: no population-matched comparison.");
+      return List.of();
+    }
+    if (!match.comparable()) {
+      warnings.add(
+          "Fewer than "
+              + PopulationMatch.MIN_WINDOWS
+              + " population-matched windows in at least one phase: no population-matched comparison.");
+      return List.of();
+    }
+    var means = new java.util.DoubleSummaryStatistics();
+    for (var phase : match.phases()) means.accept(phase.meanMatchedAvatars());
+    if (match.commonAvatarCounts().size() > 1 && means.getMax() - means.getMin() > 0.5)
+      warnings.add(
+          String.format(
+              Locale.ROOT,
+              "Matched windows mix avatar counts differently across phases (mean %.2f–%.2f); standardized FPS reweights them, raw matched FPS would not.",
+              means.getMin(),
+              means.getMax()));
+    return BracketedComparison.pairs(match.fps());
   }
 
   static void particlePopulationWarning(
