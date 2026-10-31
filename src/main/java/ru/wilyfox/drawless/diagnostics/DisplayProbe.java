@@ -221,7 +221,9 @@ public final class DisplayProbe {
    * section visibility). The window fields cover frames since the previous sample.
    */
   private static Population population(Minecraft client, LevelRenderState state, Session session) {
-    int avatars = 0, held = 0, head = 0, outside = 0;
+    int avatars = 0, held = 0, head = 0, outside = 0, rayHidden = 0;
+    long rayStart = System.nanoTime();
+    var eye = client.gameRenderer.mainCamera().position();
     ViewArea area =
         RenderModSupport.SODIUM
             ? null
@@ -239,6 +241,7 @@ public final class DisplayProbe {
         var section = area.getRenderSectionAt(position.set(avatar.x, avatar.y, avatar.z));
         if (section == null || graph.getNode(section) == null) outside++;
       } else if (SodiumVisibility.available && !SodiumVisibility.visible(avatar)) outside++;
+      if (RayOcclusion.hidden(client.level, eye, avatar.x, avatar.y, avatar.z)) rayHidden++;
     }
     return new Population(
         session.windowIntervals,
@@ -251,7 +254,9 @@ public final class DisplayProbe {
         avatars,
         held,
         head,
-        area != null || SodiumVisibility.available ? outside : -1);
+        area != null || SodiumVisibility.available ? outside : -1,
+        rayHidden,
+        (System.nanoTime() - rayStart) / 1e3);
   }
 
   /**
@@ -471,13 +476,13 @@ public final class DisplayProbe {
               sample.scanNanos / 1e6));
     }
     out.append(
-        "\n## Rendered avatar population by sample\n\nAvatars are extracted player and mannequin render states (after frustum and any renderer-side culling), unlike the loaded Players column. Window FPS, min–max and mean cover measured frames since the previous sample; the other columns describe the sampled frame. Held items count non-empty hand states; head items include worn skulls. Outside graph counts avatars in sections the occlusion graph did not reach this frame: the vanilla section graph, or Sodium's section visibility for an avatar-sized box when Sodium renders terrain — candidates for occlusion work, not proof of invisibility. The vanilla graph only extends after block edits until it is rebuilt (for example when the camera enters another section), so newly enclosed sections may still count as reached. n/a when neither source is available.\n\n| s | Window frames | Window FPS | Avatars min–max | Window mean | Avatars | Held items | Head items | Outside graph |\n| ---: | ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: |\n");
+        "\n## Rendered avatar population by sample\n\nAvatars are extracted player and mannequin render states (after frustum and any renderer-side culling), unlike the loaded Players column. Window FPS, min–max and mean cover measured frames since the previous sample; the other columns describe the sampled frame. Held items count non-empty hand states; head items include worn skulls. Outside graph counts avatars in sections the occlusion graph did not reach this frame: the vanilla section graph, or Sodium's section visibility for an avatar-sized box when Sodium renders terrain — candidates for occlusion work, not proof of invisibility. The vanilla graph only extends after block edits until it is rebuilt (for example when the camera enters another section), so newly enclosed sections may still count as reached. n/a when neither source is available. Ray hidden counts avatars for which nine rays from the camera eye (to the slightly inset corners and the center of a player-sized box) all hit a block rendered as a full opaque cube; see-through blocks never stop a ray. Both counters are candidates for occlusion work, not proof of invisibility. Population µs is the CPU time of this whole count, rays included, for the sampled frame.\n\n| s | Window frames | Window FPS | Avatars min–max | Window mean | Avatars | Held items | Head items | Outside graph | Ray hidden | Population µs |\n| ---: | ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n");
     for (Sample sample : samples) {
       var p = sample.population;
       out.append(
           String.format(
               Locale.ROOT,
-              "| %.2f | %d | %s | %d–%d | %.2f | %d | %d | %d | %s |\n",
+              "| %.2f | %d | %s | %d–%d | %.2f | %d | %d | %d | %s | %d | %.1f |\n",
               sample.seconds,
               p.windowIntervals,
               p.windowNanos > 0
@@ -489,7 +494,9 @@ public final class DisplayProbe {
               p.avatars,
               p.heldItems,
               p.headItems,
-              p.outsideGraph < 0 ? "n/a" : Integer.toString(p.outsideGraph)));
+              p.outsideGraph < 0 ? "n/a" : Integer.toString(p.outsideGraph),
+              p.rayHidden,
+              p.populationMicros));
     }
     out.append("\n## Model identifiers by sample (top 16)\n\n");
     out.append(
@@ -711,5 +718,7 @@ public final class DisplayProbe {
       int avatars,
       int heldItems,
       int headItems,
-      int outsideGraph) {}
+      int outsideGraph,
+      int rayHidden,
+      double populationMicros) {}
 }
