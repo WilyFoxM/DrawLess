@@ -15,6 +15,8 @@ repeated rendering work while keeping movement, animation and lighting live.
 - Particle lighting and empty-collision optimizations, enabled by default for new settings.
 - Player armor kept on the GPU: armor layers, trims and enchantment glint are drawn
   in a few calls instead of being rebuilt every frame.
+- Items held and worn on the head by players kept on the GPU, sharing item models with
+  Item Displays; enchanted, glowing and translucent items keep vanilla rendering.
 - Optional text/name-tag buffer reuse; each optimization has its own switch.
 - A searchable settings menu with English and Russian translations.
 
@@ -37,8 +39,8 @@ Existing configurations are preserved when updating.
 
 DrawLess works standalone or with Sodium; Sodium **0.9.2** is the tested version.
 With **ImmediatelyFast**, overlapping text and batching optimizations are disabled
-in DrawLess. With **Iris**, feature batching and GPU armor are disabled and Live
-geometry uses ordinary rendering. Unavailable controls explain why they cannot be changed.
+in DrawLess. With **Iris**, feature batching, GPU armor and GPU items on players are
+disabled and Live geometry uses ordinary rendering. Unavailable controls explain why they cannot be changed.
 With **Particle Core** or **AsyncParticles**, DrawLess disables its overlapping
 particle caches. Iris and recognized dynamic-light integrations limit light reuse
 to the current rendering pass.
@@ -47,8 +49,9 @@ to the current rendering pass.
 If text backgrounds or other layers look incorrect, select **LIMITED** or **OFF**
 under **Rendering → Feature batching**. Particle caches can be disabled
 independently under **Particles**. They default to ON for new
-settings; existing saved choices are preserved. **GPU armor** can be disabled under
-**Players**; it defaults to ON unless it was saved as OFF. Text reuse defaults to OFF.
+settings; existing saved choices are preserved. **GPU armor** and **GPU items on
+players** can be disabled under **Players**; they default to ON unless saved as OFF.
+Text reuse defaults to OFF.
 Keep **Live geometry** selected for normal play.
 
 ## Measured performance
