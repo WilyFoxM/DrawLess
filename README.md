@@ -1,24 +1,49 @@
 # DrawLess
 
-**Less rendering work for busy Item Display scenes.**
+**Less rendering work for busy multiplayer scenes.**
 
-DrawLess is a client-side optimization mod for Minecraft **26.2 / Fabric**,
-focused on decorative Item Displays and animated ModelEngine NPCs. It reduces
-repeated rendering work while keeping movement, animation and lighting live.
+DrawLess is a client-side optimization mod for Minecraft **26.2 / Fabric** for the
+scenes that make servers heavy on the client: hundreds of Item Displays and
+ModelEngine models, crowds of players in armor with items in hand, and dense
+particles. It started with Item Displays and now covers players and particles
+as well.
+
+The approach is the same everywhere: geometry that does not change stays on the
+GPU, and work that would repeat every frame is reused, while movement, animation
+and lighting stay live. Anything a path does not support falls back to vanilla
+rendering, and every optimization has its own switch.
 
 [Download on Modrinth](https://modrinth.com/mod/drawless) · [Benchmark results](benchmarks/README.md)
 
 ## What it offers
 
-- Faster rendering of supported Item Display scenes through model and geometry reuse.
-- Batching of compatible draws, with OFF, LIMITED and EXPANDED modes.
-- Particle lighting and empty-collision optimizations, enabled by default for new settings.
-- Player armor kept on the GPU: armor layers, trims and enchantment glint are drawn
+**Item Displays and models**
+
+- Live geometry: supported Item Display models, including ModelEngine models built
+  from them, keep their meshes on the GPU and draw together; each frame sends
+  only poses, lighting and tint.
+- A model cache reuses prepared model layers and refreshes them within a CPU budget.
+
+**Players**
+
+- Armor stays on the GPU: armor layers, trims and enchantment glint are drawn
   in a few calls instead of being rebuilt every frame.
-- Items held and worn on the head by players kept on the GPU, including enchantment glint,
-  sharing item models with Item Displays; glowing and translucent items keep vanilla rendering.
-- Optional text/name-tag buffer reuse; each optimization has its own switch.
-- A searchable settings menu with English and Russian translations.
+- Items held and worn on the head stay on the GPU too, including enchantment glint,
+  and share their meshes with Item Displays. Glowing and translucent items keep
+  vanilla rendering.
+
+**Particles**
+
+- Particle light reuse and a fast path for collisions with empty space; particle
+  count and movement are unchanged.
+
+**Drawing**
+
+- Batching of compatible draws, with OFF, LIMITED and EXPANDED modes.
+- Optional text/name-tag buffer reuse (OFF by default).
+
+A searchable settings menu with English and Russian translations lists every
+optimization separately.
 
 ## Getting started
 
