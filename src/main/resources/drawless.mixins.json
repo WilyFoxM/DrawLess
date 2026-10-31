@@ -36,6 +36,7 @@
     "TextBufferReuseMixin",
     "StagedBufferReuseAccessor",
     "DisplayProbeMixin",
+    "DisplayProbeViewAreaAccessor",
     "DisplayCostTickMixin",
     "DisplayCostSubmitMixin",
     "DisplayCostItemTagMixin",

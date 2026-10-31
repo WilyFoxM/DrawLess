@@ -16,15 +16,19 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.ViewArea;
 import net.minecraft.client.renderer.culling.Frustum;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.ItemDisplayEntityRenderState;
 import net.minecraft.client.renderer.state.level.LevelRenderState;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.Items;
+import ru.wilyfox.drawless.compat.RenderModSupport;
 import ru.wilyfox.drawless.util.AtomicFileWriter;
 
 /** Explicit, short diagnostic phases. Idle code never scans the world or writes files. */
@@ -157,14 +161,26 @@ public final class DisplayProbe {
     if (session.lastFrameAt != 0) {
       session.frameIntervals++;
       session.frameIntervalNanos += now - session.lastFrameAt;
+      session.windowIntervals++;
+      session.windowNanos += now - session.lastFrameAt;
     }
     session.lastFrameAt = now;
+    // Every measured frame: a window is comparable only if its rendered population held still.
+    int avatars = 0;
+    for (var entityState : state.entityRenderStates)
+      if (entityState instanceof AvatarRenderState) avatars++;
+    session.windowMinAvatars = Math.min(session.windowMinAvatars, avatars);
+    session.windowMaxAvatars = Math.max(session.windowMaxAvatars, avatars);
     if (!client.getWindow().isFocused()) session.unfocusedFrames++;
     if (now >= session.nextSampleAt && session.samples.size() < 24) {
       session.nextSampleAt = now + SECOND;
       try (var ignored = RenderMetrics.getInstance().scope("diagnostic/displayProbe/sample")) {
         long started = System.nanoTime();
         Counts counts = count(client.level.entitiesForRendering(), state, frustum);
+        Population population = population(client, state, session);
+        session.windowIntervals = session.windowNanos = 0;
+        session.windowMinAvatars = Integer.MAX_VALUE;
+        session.windowMaxAvatars = -1;
         session.samples.add(
             new Sample(
                 (now - session.measurementStart) / 1e9,
@@ -188,10 +204,47 @@ public final class DisplayProbe {
                 ru.wilyfox.drawless.performance.ParticleCollisionCache.diagnostic(),
                 ru.wilyfox.drawless.performance.ParticleWorkProbe.diagnostic(),
                 client.particleEngine.countParticles(),
-                ru.wilyfox.drawless.performance.PlayerArmorGeometry.diagnostic()));
+                ru.wilyfox.drawless.performance.PlayerArmorGeometry.diagnostic(),
+                population));
       }
     }
     if (now - session.measurementStart >= DURATION) finish(client, "complete");
+  }
+
+  /**
+   * Rendered players and mannequins of the sampled frame, items they carry, and how many stand in
+   * sections the vanilla occlusion graph did not reach this frame (-1 when another renderer owns
+   * section visibility). The window fields cover frames since the previous sample.
+   */
+  private static Population population(Minecraft client, LevelRenderState state, Session session) {
+    int avatars = 0, held = 0, head = 0, outside = 0;
+    ViewArea area =
+        RenderModSupport.SODIUM
+            ? null
+            : ((ru.wilyfox.drawless.mixin.DisplayProbeViewAreaAccessor) client.levelRenderer)
+                .drawless$viewArea();
+    var graph = client.levelRenderer.sectionOcclusionGraph();
+    var position = new BlockPos.MutableBlockPos();
+    for (var entityState : state.entityRenderStates) {
+      if (!(entityState instanceof AvatarRenderState avatar)) continue;
+      avatars++;
+      if (!avatar.rightHandItemState.isEmpty()) held++;
+      if (!avatar.leftHandItemState.isEmpty()) held++;
+      if (!avatar.headItem.isEmpty() || avatar.wornHeadType != null) head++;
+      if (area != null) {
+        var section = area.getRenderSectionAt(position.set(avatar.x, avatar.y, avatar.z));
+        if (section == null || graph.getNode(section) == null) outside++;
+      }
+    }
+    return new Population(
+        session.windowIntervals,
+        session.windowNanos,
+        session.windowMinAvatars == Integer.MAX_VALUE ? avatars : session.windowMinAvatars,
+        Math.max(session.windowMaxAvatars, avatars),
+        avatars,
+        held,
+        head,
+        area == null ? -1 : outside);
   }
 
   static Counts count(Iterable<Entity> entities, LevelRenderState state, Frustum frustum) {
@@ -383,6 +436,26 @@ public final class DisplayProbe {
               sample.profiling,
               sample.scanNanos / 1e6));
     }
+    out.append(
+        "\n## Rendered avatar population by sample\n\nAvatars are extracted player and mannequin render states (after frustum and any renderer-side culling), unlike the loaded Players column. Window FPS and min–max cover measured frames since the previous sample; the other columns describe the sampled frame. Held items count non-empty hand states; head items include worn skulls. Outside graph counts avatars in sections the vanilla occlusion graph did not reach this frame — candidates for occlusion work, not proof of invisibility. Block edits only extend the graph until it is rebuilt (for example when the camera enters another section), so newly enclosed sections may still count as reached. n/a when another renderer owns section visibility.\n\n| s | Window frames | Window FPS | Avatars min–max | Avatars | Held items | Head items | Outside graph |\n| ---: | ---: | ---: | --- | ---: | ---: | ---: | ---: |\n");
+    for (Sample sample : samples) {
+      var p = sample.population;
+      out.append(
+          String.format(
+              Locale.ROOT,
+              "| %.2f | %d | %s | %d–%d | %d | %d | %d | %s |\n",
+              sample.seconds,
+              p.windowIntervals,
+              p.windowNanos > 0
+                  ? String.format(Locale.ROOT, "%.2f", p.windowIntervals * 1e9 / p.windowNanos)
+                  : "–",
+              p.avatarsMin,
+              p.avatarsMax,
+              p.avatars,
+              p.heldItems,
+              p.headItems,
+              p.outsideGraph < 0 ? "n/a" : Integer.toString(p.outsideGraph)));
+    }
     out.append("\n## Model identifiers by sample (top 16)\n\n");
     out.append(
         "An identifier may select several models via CustomModelData; bone carriers alone do not identify decorative NPCs.\n\n");
@@ -449,6 +522,8 @@ public final class DisplayProbe {
     final long requestedAt = System.nanoTime();
     final List<Sample> samples = new ArrayList<>(24);
     long measurementStart, nextSampleAt, lastFrameAt, frameIntervals, frameIntervalNanos;
+    long windowIntervals, windowNanos;
+    int windowMinAvatars = Integer.MAX_VALUE, windowMaxAvatars = -1;
     int menuFrames, unfocusedFrames;
     Path directory;
     String metadata = "";
@@ -581,5 +656,17 @@ public final class DisplayProbe {
       String particleCollision,
       String particleWork,
       String particlePopulation,
-      String playerArmor) {}
+      String playerArmor,
+      Population population) {}
+
+  /** Frame intervals of the window ending at this sample and the rendered avatar population. */
+  record Population(
+      long windowIntervals,
+      long windowNanos,
+      int avatarsMin,
+      int avatarsMax,
+      int avatars,
+      int heldItems,
+      int headItems,
+      int outsideGraph) {}
 }
