@@ -3,23 +3,15 @@ package ru.wilyfox.drawless.performance;
 import static ru.wilyfox.drawless.performance.LiveGeometryEncoding.*;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.mojang.blaze3d.GpuFormat;
-import com.mojang.blaze3d.IndexType;
-import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.pipeline.BindGroupLayout;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.platform.NativeImage;
-import com.mojang.blaze3d.shaders.UniformType;
-import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuSampler;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.*;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -31,7 +23,6 @@ import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.player.PlayerModel;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.MappableRingBuffer;
 import net.minecraft.client.renderer.OrderedSubmitNodeCollector;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
@@ -42,9 +33,7 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureContents;
 import net.minecraft.resources.Identifier;
 import org.joml.Matrix4f;
-import org.joml.Vector3f;
 import org.lwjgl.opengl.GL31;
-import org.lwjgl.system.MemoryUtil;
 import ru.wilyfox.drawless.DrawLess;
 import ru.wilyfox.drawless.compat.RenderModSupport;
 import ru.wilyfox.drawless.config.DrawLessConfig;
@@ -64,6 +53,7 @@ import ru.wilyfox.drawless.mixin.ModelPartCubesAccessor;
 public final class PlayerArmorGeometry {
   private static final int MAX_MESH_VERTICES = 1 << 18, MAX_PARTS = 2048;
   private static final int ATLAS_SIZE = 1024, PIECE_HEADROOM = 128;
+  private static final String LABEL = "DrawLess retained armor";
 
   /** Batch key of the shared base-armor atlas; every other batch is keyed by its RenderType. */
   private static final Object ATLAS = new Object();
@@ -81,15 +71,11 @@ public final class PlayerArmorGeometry {
           "NO_CARDINAL_LIGHTING",
           "EMISSIVE",
           "APPLY_TEXTURE_MATRIX");
-  private static final BindGroupLayout MESH_LAYOUT =
-      BindGroupLayout.builder()
-          .withUniform("FHGeometry", UniformType.TEXEL_BUFFER, GpuFormat.RGBA32_FLOAT)
-          .withUniform("FHInstances", UniformType.TEXEL_BUFFER, GpuFormat.RGBA32_UINT)
-          .build();
   private static final VertexConsumer MARKER = new Marker();
   private static final IdentityHashMap<ModelPart, PartMeshes> parts = new IdentityHashMap<>();
-  private static final IdentityHashMap<RenderPipeline, RenderPipeline> pipelines =
-      new IdentityHashMap<>();
+  private static final RetainedPipelines pipelines = new RetainedPipelines("live_armor/");
+  private static final RetainedGeometryBuffer geometry =
+      new RetainedGeometryBuffer("DrawLess retained armor geometry");
   private static final IdentityHashMap<Object, ArrayList<Batch>> batches = new IdentityHashMap<>();
   private static final IdentityHashMap<RenderType, Identifier> armorTextures =
       new IdentityHashMap<>();
@@ -97,16 +83,13 @@ public final class PlayerArmorGeometry {
   private static final ArrayList<Batch> active = new ArrayList<>();
   private static final ArrayList<Pending> pending = new ArrayList<>();
   private static final ArrayList<Batch> touched = new ArrayList<>();
-  private static final Vector3f normal = new Vector3f();
   private static final long[] reasons = new long[Reason.values().length];
 
   private static ClientLevel world;
   private static boolean registered, checked, enabled, levelSubmit, inPiece, pieceFailed;
   private static boolean raw, partFailed, drawn = true;
   private static String blocked = "off";
-  private static ByteBuffer geometryData;
-  private static GpuBuffer geometryBuffer;
-  private static int vertices, uploadedVertices, maxVertices, pendingCount, batchSequence;
+  private static int pendingCount, batchSequence;
   private static GpuTexture atlas;
   private static GpuTextureView atlasView;
   private static GpuSampler atlasSampler;
@@ -121,7 +104,7 @@ public final class PlayerArmorGeometry {
   private static long replicatedTotal;
   private static PoseStack capturePose = new PoseStack();
   private static Object captureUv;
-  private static long meshBuilds, indexRebuilds, geometryUploadedBytes, instanceUploadedBytes;
+  private static long meshBuilds, indexRebuilds, instanceUploadedBytes;
   private static long framesTotal, piecesTotal, fallbackPiecesTotal, submitsTotal, instancesTotal;
   private static long drawsTotal, captureNanosTotal, uploadNanosTotal, drawNanosTotal;
   private static long captureNanos, uploadNanos, drawNanos;
@@ -161,21 +144,14 @@ public final class PlayerArmorGeometry {
     atlas = null;
     atlasSampler = null;
     shelfX = shelfY = shelfHeight = atlasTextures = 0;
-    if (geometryBuffer != null) {
-      geometryBuffer.close();
-      geometryBuffer = null;
-    }
-    if (geometryData != null) {
-      MemoryUtil.memFree(geometryData);
-      geometryData = null;
-    }
+    geometry.close();
     world = null;
     checked = enabled = levelSubmit = false;
     drawn = true;
     blocked = "off";
-    vertices = uploadedVertices = maxVertices = batchSequence = 0;
+    batchSequence = 0;
     frameInstances = frameSubmits = framePieces = frameFallbackPieces = frameDraws = 0;
-    meshBuilds = indexRebuilds = geometryUploadedBytes = instanceUploadedBytes = 0;
+    meshBuilds = indexRebuilds = instanceUploadedBytes = 0;
     framesTotal = piecesTotal = fallbackPiecesTotal = submitsTotal = instancesTotal = 0;
     replicatedTotal = frameReplicated = 0;
     drawsTotal = captureNanosTotal = uploadNanosTotal = drawNanosTotal = 0;
@@ -187,7 +163,7 @@ public final class PlayerArmorGeometry {
   public static void beginLevelSubmit(Minecraft client) {
     levelSubmit = false;
     if (!requested() || client.level == null) {
-      if (world != null || geometryBuffer != null) clear();
+      if (world != null || geometry.allocated()) clear();
       return;
     }
     if (world != client.level) {
@@ -204,9 +180,9 @@ public final class PlayerArmorGeometry {
       checked = true;
       blocked = compatibility(client);
       if (blocked.isEmpty()) {
-        maxVertices =
-            Math.min(MAX_MESH_VERTICES, GL31.glGetInteger(GL31.GL_MAX_TEXTURE_BUFFER_SIZE) / 2);
-        if (maxVertices < 4096) blocked = "texel-buffer-limit";
+        geometry.limit(
+            Math.min(MAX_MESH_VERTICES, GL31.glGetInteger(GL31.GL_MAX_TEXTURE_BUFFER_SIZE) / 2));
+        if (geometry.max() < 4096) blocked = "texel-buffer-limit";
       }
     }
     enabled = blocked.isEmpty();
@@ -419,7 +395,7 @@ public final class PlayerArmorGeometry {
       var source = templateBatch.instances.get(i);
       var mesh =
           uv == templateUv
-              ? source.mesh
+              ? (Mesh) source.mesh
               : mesh(
                   source.part,
                   ((ModelPartCubesAccessor) (Object) source.part).drawless$cubes(),
@@ -489,9 +465,8 @@ public final class PlayerArmorGeometry {
 
   private static Mesh build(PartMeshes meshes, Object uv) {
     int count = meshes.vertexCount;
-    if (vertices + count > maxVertices) return null;
-    ensureCpuCapacity((vertices + count) * VERTEX_BYTES);
-    int first = vertices;
+    if (!geometry.fits(count)) return null;
+    int first = geometry.begin(count);
     for (var polygons : meshes.polygons)
       for (var polygon : polygons) {
         var n = polygon.normal();
@@ -504,33 +479,18 @@ public final class PlayerArmorGeometry {
             u = slot.u(u);
             v = slot.v(v);
           }
-          geometryData.putFloat(vertex.worldX()).putFloat(vertex.worldY());
-          geometryData.putFloat(vertex.worldZ()).putFloat(u);
-          geometryData.putFloat(n.x()).putFloat(n.y()).putFloat(n.z()).putFloat(v);
-          vertices++;
+          geometry.vertex(
+              vertex.worldX(), vertex.worldY(), vertex.worldZ(), u, n.x(), n.y(), n.z(), v);
         }
       }
     meshBuilds++;
     return new Mesh(first, count);
   }
 
-  private static void ensureCpuCapacity(int size) {
-    if (geometryData == null)
-      geometryData =
-          MemoryUtil.memAlloc(Math.min(maxVertices * VERTEX_BYTES, Math.max(65536, size)));
-    else if (size > geometryData.capacity())
-      geometryData =
-          MemoryUtil.memRealloc(
-              geometryData,
-              Math.min(maxVertices * VERTEX_BYTES, Math.max(size, geometryData.capacity() * 2)));
-    geometryData.position(vertices * VERTEX_BYTES);
-  }
-
   private static RenderPipeline pipeline(RenderType type) {
     var base = type.pipeline();
     var cached = pipelines.get(base);
-    if (cached != null) return cached;
-    if (pipelines.containsKey(base)) return null;
+    if (cached != null || pipelines.known(base)) return cached;
     Identifier vertex;
     if (base == RenderPipelines.ARMOR_CUTOUT_NO_CULL
         || base == RenderPipelines.ARMOR_DECAL_CUTOUT_NO_CULL) {
@@ -550,38 +510,17 @@ public final class PlayerArmorGeometry {
     } else return reject(base);
     if (type.hasBlending() && base != RenderPipelines.GLINT || type.sortOnUpload())
       return reject(base);
-    var snippet =
-        new RenderPipeline.Snippet(
-            Optional.of(vertex),
-            Optional.of(base.getFragmentShader()),
-            Optional.of(base.getShaderDefines()),
-            Optional.of(base.getBindGroupLayouts()),
-            base.getColorTargetStates(),
-            base.getColorTargetStates().length,
-            Optional.ofNullable(base.getDepthStencilState()),
-            Optional.of(base.getPolygonMode()),
-            Optional.of(base.isCull()),
-            new VertexFormat[com.mojang.blaze3d.systems.RenderPass.MAX_VERTEX_BUFFERS],
-            Optional.of(base.getPrimitiveTopology()));
-    var result =
-        RenderPipeline.builder(snippet)
-            .withLocation(
-                Identifier.fromNamespaceAndPath(
-                    "drawless", "live_armor/" + base.getLocation().getPath()))
-            .withBindGroupLayout(MESH_LAYOUT)
-            .build();
     // Compile before the first piece is withheld; a shader error must not hide vanilla armor.
-    if (!RenderSystem.getDevice().precompilePipeline(result).isValid()) {
+    var result = pipelines.compile(base, vertex);
+    if (result == null) {
       block("shader-compile", null);
       return reject(base);
     }
-    pipelines.put(base, result);
     return result;
   }
 
   private static RenderPipeline reject(RenderPipeline base) {
-    pipelines.put(base, null);
-    return null;
+    return pipelines.reject(base);
   }
 
   private static Batch batch(Object key, RenderType type, int rank) {
@@ -617,18 +556,22 @@ public final class PlayerArmorGeometry {
     var matrix = RenderSystem.getModelViewStack();
     matrix.pushMatrix();
     try {
-      uploadGeometry();
+      geometry.upload();
       // Within a piece vanilla submits base layers, then trims; blended glint goes to the
       // translucent model phase after every solid group. EQUAL-depth members only interact
       // inside their piece, so ranks base < trim < glint preserve each piece's order.
       active.sort(Comparator.comparingInt((Batch b) -> b.rank).thenComparingInt(b -> b.sequence));
-      for (var batch : active) if (batch.used > 0) batch.prepare();
+      for (var batch : active)
+        if (batch.used > 0) {
+          if (batch.prepare()) indexRebuilds++;
+          instanceUploadedBytes += (long) batch.used * INSTANCE_BYTES;
+        }
       uploadNanos = System.nanoTime() - start;
       uploadNanosTotal += uploadNanos;
       long drawStart = System.nanoTime();
       matrix.set(context.levelState().cameraRenderState.viewRotationMatrix);
-      frameDraws = 0;
-      drawBatches();
+      for (var batch : active) batch.texture0 = batch.atlas ? atlasView : null;
+      frameDraws = RetainedPass.draw(LABEL, active, pipelines, geometry.buffer());
       drawNanos = System.nanoTime() - drawStart;
       drawNanosTotal += drawNanos;
       drawsTotal += frameDraws;
@@ -640,69 +583,6 @@ public final class PlayerArmorGeometry {
       matrix.popMatrix();
       for (var batch : active) batch.used = 0;
       active.clear();
-    }
-  }
-
-  /** One render pass per output target; vanilla would open one per group draw. */
-  private static void drawBatches() {
-    RenderPass pass = null;
-    GpuTextureView passColor = null, passDepth = null;
-    boolean scissored = false;
-    try {
-      for (var batch : active) {
-        if (batch.used == 0) continue;
-        var prepared = batch.type.prepare();
-        var target = prepared.outputTarget().getRenderTarget();
-        var color =
-            RenderSystem.outputColorTextureOverride != null
-                ? RenderSystem.outputColorTextureOverride
-                : target.getColorTextureView();
-        var depth =
-            target.useDepth
-                ? (RenderSystem.outputDepthTextureOverride != null
-                    ? RenderSystem.outputDepthTextureOverride
-                    : target.getDepthTextureView())
-                : null;
-        if (pass == null || color != passColor || depth != passDepth) {
-          if (pass != null) pass.close();
-          pass =
-              RenderSystem.getDevice()
-                  .createCommandEncoder()
-                  .createRenderPass(
-                      () -> "DrawLess retained armor",
-                      color,
-                      Optional.empty(),
-                      depth,
-                      OptionalDouble.empty());
-          passColor = color;
-          passDepth = depth;
-          scissored = false;
-        }
-        pass.setPipeline(pipelines.get(batch.type.pipeline()));
-        RenderSystem.bindDefaultUniforms(pass);
-        pass.setUniform("DynamicTransforms", prepared.dynamicTransforms());
-        pass.setUniform("FHGeometry", geometryBuffer);
-        pass.setUniform("FHInstances", batch.live.currentBuffer());
-        var scissor = prepared.scissorState();
-        if (scissor.enabled()) {
-          pass.enableScissor(scissor.x(), scissor.y(), scissor.width(), scissor.height());
-          scissored = true;
-        } else if (scissored) {
-          pass.disableScissor();
-          scissored = false;
-        }
-        for (var texture : prepared.textures())
-          pass.bindTexture(
-              texture.name(),
-              batch.atlas && texture.name().equals("Sampler0") ? atlasView : texture.textureView(),
-              texture.sampler());
-        pass.setIndexBuffer(batch.indices, IndexType.INT);
-        pass.drawIndexed(batch.indexCount, 1, 0, 0, 0);
-        frameDraws++;
-      }
-    } finally {
-      if (pass != null) pass.close();
-      for (var batch : active) if (batch.used > 0 && batch.live != null) batch.live.rotate();
     }
   }
 
@@ -780,34 +660,6 @@ public final class PlayerArmorGeometry {
     }
   }
 
-  private static void uploadGeometry() {
-    if (vertices == uploadedVertices) return;
-    int size = vertices * VERTEX_BYTES;
-    var encoder = RenderSystem.getDevice().createCommandEncoder();
-    if (geometryBuffer == null || geometryBuffer.size() < size) {
-      var next =
-          RenderSystem.getDevice()
-              .createBuffer(
-                  () -> "DrawLess retained armor geometry",
-                  GpuBuffer.USAGE_UNIFORM_TEXEL_BUFFER
-                      | GpuBuffer.USAGE_COPY_DST
-                      | GpuBuffer.USAGE_COPY_SRC,
-                  geometryData.capacity());
-      if (geometryBuffer != null) {
-        encoder.copyToBuffer(
-            geometryBuffer.slice(0, (long) uploadedVertices * VERTEX_BYTES),
-            next.slice(0, (long) uploadedVertices * VERTEX_BYTES));
-        geometryBuffer.close();
-      }
-      geometryBuffer = next;
-    }
-    int offset = uploadedVertices * VERTEX_BYTES;
-    encoder.writeToBuffer(
-        geometryBuffer.slice(offset, size - offset), geometryData.slice(offset, size - offset));
-    geometryUploadedBytes += size - offset;
-    uploadedVertices = vertices;
-  }
-
   private static void block(String reason, RuntimeException error) {
     if (!blocked.equals(reason))
       DrawLess.LOGGER.warn(
@@ -854,10 +706,10 @@ public final class PlayerArmorGeometry {
         drawsTotal,
         parts.size(),
         meshes,
-        vertices,
+        geometry.vertices(),
         meshBuilds,
         indexRebuilds,
-        geometryUploadedBytes,
+        geometry.uploadedBytes(),
         instanceUploadedBytes,
         atlasTextures,
         captureNanos / 1e6,
@@ -887,7 +739,7 @@ public final class PlayerArmorGeometry {
     }
   }
 
-  private record Mesh(int firstVertex, int vertexCount) {}
+  private record Mesh(int firstVertex, int vertexCount) implements RetainedMesh {}
 
   /** Base-armor texture placement inside the atlas; exact for power-of-two sizes. */
   private record AtlasSlot(int x, int y, int width, int height) {
@@ -954,130 +806,33 @@ public final class PlayerArmorGeometry {
     }
   }
 
-  private static final class Instance {
+  private static final class Instance extends RetainedInstance {
     ModelPart part;
-    Mesh mesh;
-    final Matrix4f transform = new Matrix4f();
-    final float[] normals = new float[9];
-    int color, light, overlay;
 
     void set(ModelPart part, Mesh mesh, PoseStack.Pose pose, int color, int light, int overlay) {
       this.part = part;
-      this.mesh = mesh;
-      transform.set(pose.pose());
-      this.color = color;
-      this.light = light;
-      this.overlay = overlay;
-      // Cube normals are axis aligned: transform and quantize three bases exactly as the
-      // packed signed-byte normal writer would for each face.
-      for (int i = 0; i < 3; i++) {
-        pose.transformNormal(i == 0 ? 1 : 0, i == 1 ? 1 : 0, i == 2 ? 1 : 0, normal);
-        normals[i * 3] = (byte) (int) (normal.x * 127) / 127f;
-        normals[i * 3 + 1] = (byte) (int) (normal.y * 127) / 127f;
-        normals[i * 3 + 2] = (byte) (int) (normal.z * 127) / 127f;
-      }
+      set(mesh, pose, color, light, overlay);
     }
 
     void copy(Instance source, Mesh mesh, int color, int light, int overlay) {
       part = source.part;
-      this.mesh = mesh;
-      transform.set(source.transform);
-      System.arraycopy(source.normals, 0, normals, 0, normals.length);
-      this.color = color;
-      this.light = light;
-      this.overlay = overlay;
-    }
-
-    void write(ByteBuffer data) {
-      int offset = data.position();
-      transform.get(offset, data);
-      data.position(offset + 64);
-      for (int i = 0; i < 3; i++)
-        data.putFloat(normals[i * 3])
-            .putFloat(normals[i * 3 + 1])
-            .putFloat(normals[i * 3 + 2])
-            .putFloat(0);
-      data.putInt(color).putInt(light).putInt(overlay).putInt(0);
+      copy((RetainedInstance) source, mesh, color, light, overlay);
     }
   }
 
-  private static final class Batch implements AutoCloseable {
-    final RenderType type;
+  private static final class Batch extends RetainedBatch<Instance> {
     final int rank;
     final boolean atlas;
-    final ArrayList<Instance> instances = new ArrayList<>();
-    Mesh[] previous = new Mesh[0];
-    int used, pieceStart, sequence, indexCount, previousCount;
-    GpuBuffer indices;
-    MappableRingBuffer live;
+    int pieceStart, sequence;
 
     Batch(RenderType type, int rank, boolean atlas) {
-      this.type = type;
+      super(type, LABEL, 4096);
       this.rank = rank;
       this.atlas = atlas;
     }
 
     Instance next() {
-      if (used >= MAX_INSTANCES) return null;
-      if (used == instances.size()) instances.add(new Instance());
-      return instances.get(used++);
-    }
-
-    void prepare() {
-      boolean same = previousCount == used;
-      for (int i = 0; same && i < used; i++) same = previous[i] == instances.get(i).mesh;
-      if (!same) {
-        int count = 0;
-        for (int i = 0; i < used; i++) count += instances.get(i).mesh.vertexCount / 4 * 6;
-        var data = MemoryUtil.memAlloc(count * 4);
-        try {
-          for (int i = 0; i < used; i++) {
-            var mesh = instances.get(i).mesh;
-            for (int v = 0; v < mesh.vertexCount; v += 4) {
-              int base = mesh.firstVertex + v;
-              data.putInt(index(base, i)).putInt(index(base + 1, i)).putInt(index(base + 2, i));
-              data.putInt(index(base + 2, i)).putInt(index(base + 3, i)).putInt(index(base, i));
-            }
-          }
-          data.flip();
-          var next =
-              RenderSystem.getDevice()
-                  .createBuffer(
-                      () -> "DrawLess retained armor references", GpuBuffer.USAGE_INDEX, data);
-          if (indices != null) indices.close();
-          indices = next;
-          indexCount = count;
-          indexRebuilds++;
-          if (previous.length < used) previous = new Mesh[Math.max(used, previous.length * 2)];
-          for (int i = 0; i < used; i++) previous[i] = instances.get(i).mesh;
-          previousCount = used;
-        } finally {
-          MemoryUtil.memFree(data);
-        }
-      }
-      int size = used * INSTANCE_BYTES;
-      if (live == null || live.size() < size) {
-        if (live != null) live.close();
-        live =
-            new MappableRingBuffer(
-                () -> "DrawLess retained armor transforms",
-                GpuBuffer.USAGE_MAP_WRITE | GpuBuffer.USAGE_UNIFORM_TEXEL_BUFFER,
-                Math.max(size, live == null ? 4096 : live.size() * 2));
-      }
-      try (var mapping = live.currentBuffer().slice(0, size).map(false, true)) {
-        var data = mapping.data();
-        for (int i = 0; i < used; i++) instances.get(i).write(data);
-      }
-      instanceUploadedBytes += size;
-    }
-
-    @Override
-    public void close() {
-      if (indices != null) indices.close();
-      if (live != null) live.close();
-      indices = null;
-      live = null;
-      previousCount = 0;
+      return next(Instance::new);
     }
   }
 
