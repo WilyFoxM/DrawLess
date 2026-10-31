@@ -68,6 +68,11 @@
     "ModelPartCubesAccessor",
     "PlayerArmorPartMixin",
     "PlayerArmorLayerMixin",
-    "PlayerArmorWorldMixin"
+    "PlayerArmorWorldMixin",
+    "PlayerItemWorldMixin",
+    "PlayerItemHandLayerMixin",
+    "PlayerItemHeadLayerMixin",
+    "PlayerItemStackMixin",
+    "PlayerItemSubmitMixin"
   ]
 }

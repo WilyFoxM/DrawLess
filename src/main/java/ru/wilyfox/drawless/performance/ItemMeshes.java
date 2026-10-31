@@ -22,13 +22,14 @@ import ru.wilyfox.drawless.diagnostics.RenderMetrics;
 /**
  * Shared owner of retained local item meshes.
  *
- * <p>Key: the identity sequence of a {@code List<BakedQuad>}. Value: one local mesh per material
- * (item RenderType, tint index, light emission) in one shared texel buffer, or a remembered refusal
- * (transparency, unsupported pipeline). Lifetime: until resource reload, world change, disconnect,
- * client stop, or the frame no consumer requests meshes. Render thread only. Limits: vertex and key
- * counts are bounded; a full store refuses (capacity) rather than evicts. Consumers keep their own
- * frame instance lists and turn off independently; a consumer's runtime failure does not clear
- * meshes.
+ * <p>Key: the identity sequence of a {@code List<BakedQuad>}; immutable lists may also be aliased
+ * by identity ({@link #forImmutable}), refilled lists are looked up by content ({@link
+ * #forContent}). Value: one local mesh per material (item RenderType, tint index, light emission)
+ * in one shared texel buffer, or a remembered refusal (transparency, unsupported pipeline).
+ * Lifetime: until resource reload, world change, disconnect, client stop, or the frame no consumer
+ * requests meshes. Render thread only. Limits: vertex and key counts are bounded; a full store
+ * refuses (capacity) rather than evicts. Consumers keep their own frame instance lists and turn off
+ * independently; a consumer's runtime failure does not clear meshes.
  */
 final class ItemMeshes {
   private static final int MAX_MESHES = 4096, MAX_ALIASES = 8192;
@@ -36,7 +37,8 @@ final class ItemMeshes {
   private static final Identifier VERTEX_SHADER =
       Identifier.fromNamespaceAndPath("drawless", "core/live_item");
   private static final IdentityHashMap<List<BakedQuad>, Geometry> aliases = new IdentityHashMap<>();
-  private static final HashMap<QuadKey, Geometry> geometries = new HashMap<>();
+  private static final HashMap<Object, Geometry> geometries = new HashMap<>();
+  private static final Probe probe = new Probe();
   private static final RetainedGeometryBuffer buffer =
       new RetainedGeometryBuffer("DrawLess shared local Item Display geometry");
   private static final RetainedPipelines pipelines = new RetainedPipelines("live/");
@@ -57,7 +59,7 @@ final class ItemMeshes {
 
   /** True while at least one consumer may draw item meshes. */
   static boolean requested() {
-    return LiveDisplayGeometry.requested();
+    return LiveDisplayGeometry.requested() || PlayerItemGeometry.requested();
   }
 
   /**
@@ -136,6 +138,28 @@ final class ItemMeshes {
       aliases.put(quads, cached);
       return cached;
     }
+    return build(key, quads, quads);
+  }
+
+  /**
+   * Meshes for a quad list that a caller refills between frames (an extracted layer of a living
+   * entity): looked up by content every call, never remembered by identity.
+   */
+  static Geometry forContent(List<BakedQuad> quads) {
+    if (quads.size() > 16384) return Geometry.CAPACITY;
+    probe.quads = quads;
+    try {
+      var cached = geometries.get(probe);
+      if (cached != null) return cached;
+    } finally {
+      probe.quads = null;
+    }
+    if (keyQuads + (long) quads.size() > 1_048_576) return Geometry.CAPACITY;
+    return build(new QuadKey(quads), quads, null);
+  }
+
+  /** {@code alias}: the immutable list to remember by identity, or null. */
+  private static Geometry build(QuadKey key, List<BakedQuad> quads, List<BakedQuad> alias) {
     if (buildsThisFrame >= 4 || buildsThisFrame > 0 && buildNanos > 2_000_000)
       return Geometry.WARMING;
     long start = System.nanoTime();
@@ -146,16 +170,16 @@ final class ItemMeshes {
         var info = quad.materialInfo();
         var type = info.itemRenderType();
         if (type.hasBlending() || type.sortOnUpload())
-          return remember(key, quads, Geometry.TRANSPARENT);
+          return remember(key, alias, Geometry.TRANSPARENT);
         var pipeline = type.pipeline();
         if (!pipeline.getVertexShader().equals(ITEM_SHADER)
             || !pipeline.getFragmentShader().equals(ITEM_SHADER)
             || !pipeline.getShaderDefines().flags().isEmpty()
             || pipeline.getShaderDefines().values().keySet().stream()
                 .anyMatch(name -> !name.equals("ALPHA_CUTOUT")))
-          return remember(key, quads, Geometry.UNSUPPORTED);
+          return remember(key, alias, Geometry.UNSUPPORTED);
         if (!pipelines.known(pipeline) && pipelines.size() >= 32)
-          return remember(key, quads, Geometry.UNSUPPORTED);
+          return remember(key, alias, Geometry.UNSUPPORTED);
         grouped
             .computeIfAbsent(
                 new Material(type, info.isTinted() ? info.tintIndex() : -1, info.lightEmission()),
@@ -163,7 +187,7 @@ final class ItemMeshes {
             .add(quad);
       }
       if (meshCount + grouped.size() > MAX_MESHES || !buffer.fits((long) quads.size() * 4))
-        return remember(key, quads, Geometry.CAPACITY);
+        return remember(key, alias, Geometry.CAPACITY);
       // Compile before accepting a single part; shader errors cannot make the vanilla model vanish.
       for (var material : grouped.keySet()) pipeline(material.type.pipeline());
       buffer.begin(quads.size() * 4);
@@ -192,17 +216,17 @@ final class ItemMeshes {
         meshCount++;
         meshBuilds++;
       }
-      return remember(key, quads, new Geometry(Status.READY, List.copyOf(meshes)));
+      return remember(key, alias, new Geometry(Status.READY, List.copyOf(meshes)));
     } finally {
       buildNanos += System.nanoTime() - start;
     }
   }
 
-  private static Geometry remember(QuadKey key, List<BakedQuad> quads, Geometry geometry) {
+  private static Geometry remember(QuadKey key, List<BakedQuad> alias, Geometry geometry) {
     if (geometries.size() >= MAX_MESHES) return Geometry.CAPACITY;
     geometries.put(key, geometry);
     keyQuads += key.quads.length;
-    aliases.put(quads, geometry);
+    if (alias != null) aliases.put(alias, geometry);
     return geometry;
   }
 
@@ -319,9 +343,14 @@ final class ItemMeshes {
 
     QuadKey(List<BakedQuad> source) {
       quads = source.toArray(BakedQuad[]::new);
+      hash = hash(source);
+    }
+
+    static int hash(List<BakedQuad> quads) {
       int h = 1;
-      for (var q : quads) h = 31 * h + System.identityHashCode(q);
-      hash = h;
+      for (int i = 0, n = quads.size(); i < n; i++)
+        h = 31 * h + System.identityHashCode(quads.get(i));
+      return h;
     }
 
     @Override
@@ -334,6 +363,26 @@ final class ItemMeshes {
       if (!(other instanceof QuadKey key) || hash != key.hash || quads.length != key.quads.length)
         return false;
       for (int i = 0; i < quads.length; i++) if (quads[i] != key.quads[i]) return false;
+      return true;
+    }
+  }
+
+  /**
+   * Allocation-free lookup view of a live list; HashMap calls {@code probe.equals(storedKey)}. Held
+   * only for the duration of one lookup.
+   */
+  private static final class Probe {
+    List<BakedQuad> quads;
+
+    @Override
+    public int hashCode() {
+      return QuadKey.hash(quads);
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      if (!(other instanceof QuadKey key) || key.quads.length != quads.size()) return false;
+      for (int i = 0; i < key.quads.length; i++) if (key.quads[i] != quads.get(i)) return false;
       return true;
     }
   }

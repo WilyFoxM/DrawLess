@@ -205,6 +205,7 @@ public final class DisplayProbe {
                 ru.wilyfox.drawless.performance.ParticleWorkProbe.diagnostic(),
                 client.particleEngine.countParticles(),
                 ru.wilyfox.drawless.performance.PlayerArmorGeometry.diagnostic(),
+                ru.wilyfox.drawless.performance.PlayerItemGeometry.diagnostic(),
                 population));
       }
     }
@@ -505,6 +506,10 @@ public final class DisplayProbe {
         "\n## Retained player armor geometry by sample\n\nArmor model-part meshes are retained on the GPU for their resource lifetime; each frame streams one 128-byte instance per captured part (pose, normal bases, tint, light, overlay). Per-frame fields describe the last level render before the sample; *Total fields are cumulative, so difference them between samples. A piece is one equipment renderLayers call; base, glint and trim submits of a piece are captured together or all replayed through the ordinary path (fallback reasons count pieces). capture includes animation setup and the part traversal at submit time; upload includes new mesh vertices, index rebuilds and instance writes; drawCpu is CPU time to record the retained draws. These are CPU-thread elapsed times measured every active frame, not GPU time. Vanilla armor preparation and execution that no longer occur are not counted here; compare player profiles or bracketed FPS for net effect.\n\n| s | Player armor |\n| ---: | --- |\n");
     for (var sample : samples)
       out.append(String.format(Locale.ROOT, "| %.2f | %s |\n", sample.seconds, sample.playerArmor));
+    out.append(
+        "\n## Retained player item geometry by sample\n\nItems held and worn in the head item layer by avatars reuse the shared item meshes of Item Displays, looked up by quad content every submit; each frame streams one 128-byte instance per material of a captured layer. A piece is one item stack: all its layers are captured together or all replayed through the ordinary path in order (fallback reasons count pieces). capture covers the content lookup and instance setup at submit time; upload covers new shared mesh vertices, index rebuilds and instance writes; drawCpu is CPU time to record the retained draws. CPU-thread elapsed times, not GPU time; vanilla item preparation that no longer occurs is not counted here.\n\n| s | Player items |\n| ---: | --- |\n");
+    for (var sample : samples)
+      out.append(String.format(Locale.ROOT, "| %.2f | %s |\n", sample.seconds, sample.playerItems));
     if (!samples.isEmpty())
       out.append("\n## NPC group membership (last sample, top 16)\n\n")
           .append(samples.getLast().npcGroups);
@@ -562,6 +567,8 @@ public final class DisplayProbe {
                   && !ru.wilyfox.drawless.compat.RenderModSupport.IMMEDIATELY_FAST)
               + "; player armor geometry "
               + config.playerArmorGeometry
+              + "; player item geometry "
+              + config.playerItemGeometry
               + "; feature batching "
               + config.featureBatching
               + "; feature batching effective "
@@ -657,6 +664,7 @@ public final class DisplayProbe {
       String particleWork,
       String particlePopulation,
       String playerArmor,
+      String playerItems,
       Population population) {}
 
   /** Frame intervals of the window ending at this sample and the rendered avatar population. */

@@ -29,6 +29,7 @@ public final class BenchmarkSeries {
     PARTICLE_COLLISION,
     TEXT,
     PLAYER_ARMOR,
+    PLAYER_ITEMS,
     BATCHING;
 
     String id() {
@@ -48,13 +49,15 @@ public final class BenchmarkSeries {
         case PARTICLE_COLLISION -> c.particleEmptyCollision = on;
         case TEXT -> c.textBufferReuse = on;
         case PLAYER_ARMOR -> c.playerArmorGeometry = on;
+        case PLAYER_ITEMS -> c.playerItemGeometry = on;
         case BATCHING -> c.featureBatching = on;
       }
     }
 
     boolean unavailable() {
       return (this == TEXT || this == BATCHING) && RenderModSupport.IMMEDIATELY_FAST
-          || (this == BATCHING || this == PLAYER_ARMOR) && RenderModSupport.IRIS
+          || (this == BATCHING || this == PLAYER_ARMOR || this == PLAYER_ITEMS)
+              && RenderModSupport.IRIS
           || (this == PARTICLES || this == PARTICLE_LIGHT || this == PARTICLE_COLLISION)
               && !RenderModSupport.PARTICLE_CACHES;
     }
