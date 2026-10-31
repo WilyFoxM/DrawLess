@@ -3,7 +3,7 @@
   "id": "drawless",
   "version": "${version}",
   "name": "DrawLess",
-  "description": "Client-side rendering optimizations for Item Display scenes and particles.",
+  "description": "Client-side rendering optimizations for busy multiplayer scenes: Item Displays, players and particles.",
   "authors": [
     "WilyFox"
   ],
