@@ -72,9 +72,30 @@ Three owners keep geometry on the GPU in this scene: Item Displays (Live geometr
 
 Together the paths cost about 0.81 ms of measured CPU per frame. This is the price inside the named scopes, not the net effect: the vanilla work they replace is not counted here, and GPU execution, particle caches, feature batching and other overhead are not included. Per frame, the ON phases report 218–239 Item Display parts in one draw, 36–44 armor pieces and 11–13 player bodies in three draws (1–2 bodies with semi-transparent skins stay on the ordinary path) and 25–30 player item stacks in two to three draws (4 translucent stacks stay on the ordinary path).
 
+### External cross-check
+
+Because the result was much larger than Benchmark 03, I checked it the same evening with a tool outside DrawLess: [PresentMon](https://github.com/GameTechDev/PresentMon) 2.x, which records the time between frames presented by the game process. Five 30-second captures at the same spawn, switching the DrawLess master switch in the settings between them (19:38–19:43):
+
+| Capture | Mean FPS | Median frame | p95 | p99 | 1% low | GPU busy | CPU busy |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| OFF1 | 168.70 | 5.49 ms | 9.21 ms | 10.11 ms | 98.9 FPS | 2.81 ms | 5.93 ms |
+| ON1 | 221.58 | 4.17 ms | 7.49 ms | 8.47 ms | 118.0 FPS | 2.44 ms | 4.51 ms |
+| OFF2 | 152.02 | 6.07 ms | 9.85 ms | 10.87 ms | 92.0 FPS | 3.07 ms | 6.58 ms |
+| ON2 | 219.29 | 4.19 ms | 7.44 ms | 8.64 ms | 115.7 FPS | 2.56 ms | 4.56 ms |
+| OFF3 | 158.45 | 5.87 ms | 9.29 ms | 10.11 ms | 98.9 FPS | 3.10 ms | 6.31 ms |
+
+- Bracketed like the series: **+38.18% and +41.27%, mean +39.72%** (OFF range/mean 10.44%). Both ON captures exceed both neighboring OFF captures. The scene was lighter by then than in `release2` (OFF about 150–170 FPS instead of about 120; 5–8 rendered player models in the profiles taken right after), so the percentage is lower; the direction and size agree with the series.
+- The slow end improves less than the average: against neighboring OFF captures, p95 frame time is 21–22% shorter, p99 18–19% shorter and 1% low 21–24% higher, while mean FPS is 38–41% higher.
+- PresentMon reports lower GPU busy time with DrawLess ON as well as lower CPU busy time; the game was CPU-bound in both states.
+- Stage profiles with the master switch OFF/ON/OFF/ON (19:44–19:46, profiler enabled, so not normal FPS): CPU frame time 6.24 / 4.08 / 5.47 / 4.30 ms. The 1.67 ms difference lies in named stages: Item Display preparation −0.66 ms, translucent phase −0.44 ms, solid phase −0.22 ms, model preparation −0.22 ms, entity submission −0.16 ms, buffer upload −0.09 ms, particles −0.04 ms; DrawLess's own capture adds about 0.16 ms.
+
+I also tried to compare DrawLess switched OFF with the game without DrawLess installed, alternating restarts. The scene changed too much between restarts (the OFF captures alone went from 112 to 168 FPS), so that comparison is inconclusive: the second capture without DrawLess (161.8 FPS) lies between its neighboring OFF captures (143.9 and 168.0 FPS). OFF in these benchmarks therefore means DrawLess installed with its master switch off.
+
+All captures and profiles, byte-for-byte with SHA-256: [`DrawLess-benchmarks/control-20261101/raw/`](https://github.com/WilyFoxM/DrawLess-benchmarks/tree/dac1386a411c884f66e7289c822d72f769e6640d/control-20261101/raw).
+
 ### Review findings and limitations
 
-- One scene, one session, one machine. No confidence interval, independent-session repeat, p95/p99, 1% low or GPU elapsed time is available.
+- One scene, one session, one machine. No confidence interval or independent-session repeat is available. The series reports have no p95/p99 or 1% low; the external cross-check above has them for a later, lighter scene. GPU elapsed time was not measured by DrawLess; the cross-check shows PresentMon GPU busy time.
 - OFF drift exceeds the 5% screening threshold in all three series (6.65–16.52%); the population adjustment corrects only the number of rendered player models.
 - The FPS slider was at its maximum (260, shown as Unlimited), so no frame limiter was active.
 - AFK frame throttling was paused by the series and restored afterwards.
