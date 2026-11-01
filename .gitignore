@@ -71,8 +71,6 @@ Desktop.ini
 /tools/
 /benchmarks/results/**
 !/benchmarks/results/spawn-20261016/
-!/benchmarks/results/spawn-20261016/raw/
-!/benchmarks/results/spawn-20261016/raw/*.md
 !/benchmarks/results/spawn-20261016/modrinth-card.png
 !/benchmarks/results/spawn-20261016/phase-fps.png
 !/benchmarks/results/spawn-20261016/cache-cpu.png
@@ -81,30 +79,18 @@ Desktop.ini
 !gradle/wrapper/gradle-wrapper.jar
 
 
-# Selected Benchmark 02 figures and original measurements.
+# Selected Benchmark 02 figures (raw files: WilyFoxM/DrawLess-benchmarks).
 !/benchmarks/results/spawn-20261017/
-!/benchmarks/results/spawn-20261017/raw/
-!/benchmarks/results/spawn-20261017/raw/*.md
 !/benchmarks/results/spawn-20261017/modrinth-card.png
 !/benchmarks/results/spawn-20261017/phase-fps.png
 !/benchmarks/results/spawn-20261017/cache-cpu.png
 
-# Benchmark 03 card and original measurements of all three series.
+# Benchmark 03 and 04 figures (raw files: WilyFoxM/DrawLess-benchmarks).
 !/benchmarks/results/spawn-20261031/
 !/benchmarks/results/spawn-20261031/modrinth-card.png
-!/benchmarks/results/spawn-20261031/raw/
-!/benchmarks/results/spawn-20261031/raw/SHA256SUMS.txt
-!/benchmarks/results/spawn-20261031/raw/benchmark-*/
-!/benchmarks/results/spawn-20261031/raw/benchmark-*/*.md
-!/benchmarks/results/spawn-20261031/raw/benchmark-*/summary.json
 !/benchmarks/results/spawn-20261031/phase-fps.png
 !/benchmarks/results/spawn-20261031/retained-cpu.png
 !/benchmarks/results/spawn-20261101/
 !/benchmarks/results/spawn-20261101/modrinth-card.png
-!/benchmarks/results/spawn-20261101/raw/
-!/benchmarks/results/spawn-20261101/raw/SHA256SUMS.txt
-!/benchmarks/results/spawn-20261101/raw/benchmark-*/
-!/benchmarks/results/spawn-20261101/raw/benchmark-*/*.md
-!/benchmarks/results/spawn-20261101/raw/benchmark-*/summary.json
 !/benchmarks/results/spawn-20261101/phase-fps.png
 !/benchmarks/results/spawn-20261101/retained-cpu.png
