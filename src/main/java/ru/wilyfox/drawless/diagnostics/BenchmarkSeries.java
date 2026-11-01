@@ -30,6 +30,7 @@ public final class BenchmarkSeries {
     TEXT,
     PLAYER_ARMOR,
     PLAYER_ITEMS,
+    PLAYER_BODY,
     BATCHING;
 
     String id() {
@@ -50,14 +51,19 @@ public final class BenchmarkSeries {
         case TEXT -> c.textBufferReuse = on;
         case PLAYER_ARMOR -> c.playerArmorGeometry = on;
         case PLAYER_ITEMS -> c.playerItemGeometry = on;
+        case PLAYER_BODY -> c.playerBodyGeometry = on;
         case BATCHING -> c.featureBatching = on;
       }
     }
 
     boolean unavailable() {
       return (this == TEXT || this == BATCHING) && RenderModSupport.IMMEDIATELY_FAST
-          || (this == BATCHING || this == PLAYER_ARMOR || this == PLAYER_ITEMS)
+          || (this == BATCHING
+                  || this == PLAYER_ARMOR
+                  || this == PLAYER_ITEMS
+                  || this == PLAYER_BODY)
               && RenderModSupport.IRIS
+          || this == PLAYER_BODY && RenderModSupport.PLAYER_MODEL_MODS
           || (this == PARTICLES || this == PARTICLE_LIGHT || this == PARTICLE_COLLISION)
               && !RenderModSupport.PARTICLE_CACHES;
     }

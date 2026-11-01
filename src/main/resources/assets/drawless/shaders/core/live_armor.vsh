@@ -88,7 +88,10 @@ void main() {
     overlayColor = texelFetch(Sampler1, ivec2(properties.z & 65535u, properties.z >> 16u), 0);
 #endif
 
-    texCoord0 = vec2(local.w, direction.w);
+    // Player bodies share one mesh per part and move it to their skin's atlas slot; armor sends
+    // a zero offset, which leaves its UVs bit-identical.
+    texCoord0 = vec2(local.w, direction.w)
+        + vec2(float(properties.w & 65535u), float(properties.w >> 16u)) / 1024.0;
 
 #ifdef APPLY_TEXTURE_MATRIX
     texCoord0 = (TextureMat * vec4(texCoord0, 0.0, 1.0)).xy;

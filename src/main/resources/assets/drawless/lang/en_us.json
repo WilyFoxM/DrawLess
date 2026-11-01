@@ -109,5 +109,8 @@
   "drawless.setting.player_armor_geometry": "GPU armor geometry",
   "drawless.setting.player_armor_geometry.description": "Keeps player armor meshes on the GPU and sends only part poses, lighting and tint each frame. Base layers, trims and glint of a piece always use the same path; unsupported armor uses vanilla rendering.",
   "drawless.setting.player_item_geometry": "GPU items on players",
-  "drawless.setting.player_item_geometry.description": "Keeps meshes of items held and worn on the head by players and mannequins on the GPU, shared with Item Displays, and sends only item poses, lighting and tint each frame, including enchantment glint. Glowing, translucent and specially rendered items use vanilla rendering."
+  "drawless.setting.player_item_geometry.description": "Keeps meshes of items held and worn on the head by players and mannequins on the GPU, shared with Item Displays, and sends only item poses, lighting and tint each frame, including enchantment glint. Glowing, translucent and specially rendered items use vanilla rendering.",
+  "drawless.setting.player_body_geometry": "GPU player bodies",
+  "drawless.setting.player_body_geometry.description": "Keeps player body meshes and skins on the GPU and draws every body in one call. Only skins without semi-transparent pixels use it; other skins, invisible and glowing players keep vanilla rendering.",
+  "drawless.unavailable.player_model_mods": "Unavailable with a mod that changes player models or skins. The saved DrawLess preference is preserved."
 }

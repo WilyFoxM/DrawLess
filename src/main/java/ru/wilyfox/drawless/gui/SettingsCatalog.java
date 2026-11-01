@@ -74,6 +74,16 @@ final class SettingsCatalog {
             v -> c().playerItemGeometry = v,
             () -> RenderModSupport.IRIS ? reason("iris") : null));
     options.add(
+        toggle(
+            "player_body_geometry",
+            Page.PLAYERS,
+            () -> c().playerBodyGeometry,
+            v -> c().playerBodyGeometry = v,
+            () ->
+                RenderModSupport.IRIS
+                    ? reason("iris")
+                    : RenderModSupport.PLAYER_MODEL_MODS ? reason("player_model_mods") : null));
+    options.add(
         choice(
             "display_mode",
             Page.RENDERING,

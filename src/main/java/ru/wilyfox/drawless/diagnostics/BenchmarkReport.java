@@ -115,6 +115,8 @@ final class BenchmarkReport {
       particlePopulationWarning(runs, warnings, target.startsWith("particle"));
       if (target.equals("player_armor"))
         retainedWarning(runs, warnings, DisplayProbe.Sample::playerArmor, "player armor");
+      if (target.equals("player_body"))
+        retainedWarning(runs, warnings, DisplayProbe.Sample::playerArmor, "player body");
       if (target.equals("player_items"))
         retainedWarning(runs, warnings, DisplayProbe.Sample::playerItems, "player item");
       json.addProperty(
