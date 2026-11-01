@@ -610,6 +610,8 @@ public final class DisplayProbe {
               + config.playerArmorGeometry
               + "; player item geometry "
               + config.playerItemGeometry
+              + "; player body geometry "
+              + config.playerBodyGeometry
               + "; feature batching "
               + config.featureBatching
               + "; feature batching effective "

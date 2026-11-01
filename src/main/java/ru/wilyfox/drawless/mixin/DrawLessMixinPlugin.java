@@ -24,6 +24,8 @@ public final class DrawLessMixinPlugin implements IMixinConfigPlugin {
     // Sodium replaces the vanilla section graph that this diagnostic reads.
     if (mixin.endsWith(".DisplayProbeViewAreaAccessor")) return !RenderModSupport.SODIUM;
     // Shader packs replace the entity programs that retained armor derives its pipelines from.
+    if (mixin.contains(".PlayerBody"))
+      return !RenderModSupport.IRIS && !RenderModSupport.PLAYER_MODEL_MODS;
     if (mixin.contains(".PlayerArmor")
         || mixin.contains(".PlayerItem")
         || mixin.endsWith(".ModelPartCubesAccessor")) return !RenderModSupport.IRIS;

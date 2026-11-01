@@ -18,6 +18,7 @@ public final class DrawLessConfig {
   public boolean textBufferReuse = false;
   public boolean playerArmorGeometry = true;
   public boolean playerItemGeometry = true;
+  public boolean playerBodyGeometry = false;
   public boolean featureBatching = true;
   public boolean featureBatchingReorder = true;
   public boolean displayModelBudget = true;

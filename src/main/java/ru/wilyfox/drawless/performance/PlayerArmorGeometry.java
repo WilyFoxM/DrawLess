@@ -25,12 +25,17 @@ import net.minecraft.client.model.player.PlayerModel;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.OrderedSubmitNodeCollector;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.SimpleTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureContents;
+import net.minecraft.client.resources.DefaultPlayerSkin;
 import net.minecraft.resources.Identifier;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL31;
@@ -49,6 +54,14 @@ import ru.wilyfox.drawless.mixin.ModelPartCubesAccessor;
  * EQUAL depth test, so mixing GPU-transformed and CPU-transformed members of a piece is refused. A
  * failed piece is replayed through the ordinary submit operations before the piece returns, while
  * submission is still open.
+ *
+ * <p>Player bodies (an experimental, separately switched path) share the part meshes and the draw.
+ * Vanilla draws a body as {@code entityTranslucent(skin)} in the distance-sorted translucent phase.
+ * Skin downloads force the base layer opaque, and the entity shader discards alpha below 0.1; a
+ * skin with no texel alpha between 26 and 254 therefore yields only discarded or opaque,
+ * depth-writing fragments, whose result does not depend on blending order. Such skins are copied
+ * into a skin atlas and every body draws once after the solid features with the same shader as
+ * {@code entityCutout}. Any other skin, tint, outline or translucency keeps the vanilla submit.
  */
 public final class PlayerArmorGeometry {
   private static final int MAX_MESH_VERTICES = 1 << 18, MAX_PARTS = 2048;
@@ -57,6 +70,15 @@ public final class PlayerArmorGeometry {
 
   /** Batch key of the shared base-armor atlas; every other batch is keyed by its RenderType. */
   private static final Object ATLAS = new Object();
+
+  /** Batch key of player bodies; their UVs are moved into each skin's atlas cell per instance. */
+  private static final Object SKINS = new Object();
+
+  private static final int SKIN_SIZE = 64, SKIN_CELL = SKIN_SIZE + 2;
+  private static final int SKIN_COLUMNS = ATLAS_SIZE / SKIN_CELL;
+
+  /** UV mapping of body meshes: a 64x64 skin at the atlas origin; instances add their cell. */
+  private static final AtlasSlot SKIN_UV = new AtlasSlot(0, 0, SKIN_SIZE, SKIN_SIZE);
 
   private static final Identifier ARMOR_VERTEX =
       Identifier.fromNamespaceAndPath("drawless", "core/live_armor");
@@ -84,6 +106,9 @@ public final class PlayerArmorGeometry {
   private static final ArrayList<Pending> pending = new ArrayList<>();
   private static final ArrayList<Batch> touched = new ArrayList<>();
   private static final long[] reasons = new long[Reason.values().length];
+  private static final long[] bodyReasons = new long[Reason.values().length];
+  private static final IdentityHashMap<AbstractTexture, SkinSlot> skins = new IdentityHashMap<>();
+  private static final SkinSlot[] skinCells = new SkinSlot[SKIN_COLUMNS * SKIN_COLUMNS];
 
   private static ClientLevel world;
   private static boolean registered, checked, enabled, levelSubmit, inPiece, pieceFailed;
@@ -108,6 +133,11 @@ public final class PlayerArmorGeometry {
   private static long framesTotal, piecesTotal, fallbackPiecesTotal, submitsTotal, instancesTotal;
   private static long drawsTotal, captureNanosTotal, uploadNanosTotal, drawNanosTotal;
   private static long captureNanos, uploadNanos, drawNanos;
+  private static GpuTexture skinAtlas;
+  private static GpuTextureView skinAtlasView;
+  private static int captureOffset, frameBodies, frameBodyFallbacks;
+  private static long frame, bodiesTotal, bodyFallbacksTotal, bodyNanos, bodyNanosTotal;
+  private static long skinsAdmitted, skinsPartial, skinsEvicted;
 
   private PlayerArmorGeometry() {}
 
@@ -120,8 +150,20 @@ public final class PlayerArmorGeometry {
   }
 
   public static boolean requested() {
+    return armorRequested() || bodyRequested();
+  }
+
+  private static boolean armorRequested() {
     var config = DrawLessConfig.get();
     return config.enabled && config.playerArmorGeometry && !RenderModSupport.IRIS;
+  }
+
+  private static boolean bodyRequested() {
+    var config = DrawLessConfig.get();
+    return config.enabled
+        && config.playerBodyGeometry
+        && !RenderModSupport.IRIS
+        && !RenderModSupport.PLAYER_MODEL_MODS;
   }
 
   /** Resource reload replaces model parts and atlas sprites; pipelines follow the device. */
@@ -144,6 +186,16 @@ public final class PlayerArmorGeometry {
     atlas = null;
     atlasSampler = null;
     shelfX = shelfY = shelfHeight = atlasTextures = 0;
+    skins.clear();
+    Arrays.fill(skinCells, null);
+    if (skinAtlasView != null) skinAtlasView.close();
+    if (skinAtlas != null) skinAtlas.close();
+    skinAtlasView = null;
+    skinAtlas = null;
+    frameBodies = frameBodyFallbacks = 0;
+    bodiesTotal = bodyFallbacksTotal = bodyNanos = bodyNanosTotal = 0;
+    skinsAdmitted = skinsPartial = skinsEvicted = 0;
+    Arrays.fill(bodyReasons, 0);
     geometry.close();
     world = null;
     checked = enabled = levelSubmit = false;
@@ -176,6 +228,9 @@ public final class PlayerArmorGeometry {
     frameInstances = frameSubmits = framePieces = frameFallbackPieces = frameDraws = 0;
     frameReplicated = 0;
     captureNanos = 0;
+    frameBodies = frameBodyFallbacks = 0;
+    bodyNanos = 0;
+    frame++;
     if (!checked) {
       checked = true;
       blocked = compatibility(client);
@@ -212,7 +267,7 @@ public final class PlayerArmorGeometry {
   }
 
   public static void beginPiece() {
-    if (!levelSubmit || inPiece) return;
+    if (!levelSubmit || inPiece || !armorRequested()) return;
     inPiece = true;
     pieceFailed = false;
     pendingCount = 0;
@@ -357,6 +412,7 @@ public final class PlayerArmorGeometry {
     captureBatch = batch;
     // Vanilla preparation would wrap the consumer with this sprite; meshes bake the same UVs.
     captureUv = uv;
+    captureOffset = 0;
     raw = partFailed = false;
     try {
       model.setupAnim(state);
@@ -433,6 +489,7 @@ public final class PlayerArmorGeometry {
       return;
     }
     instance.set(part, mesh, pose, color, light, overlay);
+    instance.uvOffset = captureOffset;
   }
 
   private static void rollback() {
@@ -493,7 +550,8 @@ public final class PlayerArmorGeometry {
     if (cached != null || pipelines.known(base)) return cached;
     Identifier vertex;
     if (base == RenderPipelines.ARMOR_CUTOUT_NO_CULL
-        || base == RenderPipelines.ARMOR_DECAL_CUTOUT_NO_CULL) {
+        || base == RenderPipelines.ARMOR_DECAL_CUTOUT_NO_CULL
+        || base == RenderPipelines.ENTITY_CUTOUT) {
       var defines = base.getShaderDefines();
       if (!base.getVertexShader().equals(ENTITY_SHADER)
           || !base.getFragmentShader().equals(ENTITY_SHADER)
@@ -532,7 +590,7 @@ public final class PlayerArmorGeometry {
         return batch;
       }
     if (batches.size() > 256 || list.size() > 64) return null;
-    var batch = new Batch(type, rank, key == ATLAS);
+    var batch = new Batch(type, rank, key == ATLAS, key == SKINS);
     list.add(batch);
     activate(batch);
     return batch;
@@ -570,7 +628,8 @@ public final class PlayerArmorGeometry {
       uploadNanosTotal += uploadNanos;
       long drawStart = System.nanoTime();
       matrix.set(context.levelState().cameraRenderState.viewRotationMatrix);
-      for (var batch : active) batch.texture0 = batch.atlas ? atlasView : null;
+      for (var batch : active)
+        batch.texture0 = batch.atlas ? atlasView : batch.skins ? skinAtlasView : null;
       frameDraws = RetainedPass.draw(LABEL, active, pipelines, geometry.buffer());
       drawNanos = System.nanoTime() - drawStart;
       drawNanosTotal += drawNanos;
@@ -660,6 +719,199 @@ public final class PlayerArmorGeometry {
     }
   }
 
+  /**
+   * Withholds a player body submit when its skin and state allow the opaque retained path; returns
+   * false to leave the submit to vanilla. Called for every living-entity body submit.
+   */
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  public static boolean body(
+      SubmitNodeCollector collector,
+      Model model,
+      Object state,
+      PoseStack pose,
+      RenderType type,
+      int light,
+      int overlay,
+      int color,
+      TextureAtlasSprite sprite,
+      int outline,
+      ModelFeatureRenderer.CrumblingOverlay crumbling) {
+    if (!levelSubmit || !(state instanceof AvatarRenderState avatar) || !bodyRequested())
+      return false;
+    long start = System.nanoTime();
+    var reason = Reason.READY;
+    RenderType cutout = null;
+    SkinSlot slot = null;
+    if (model.getClass() != PlayerModel.class) reason = Reason.MODEL;
+    else if (outline != 0 || crumbling != null) reason = Reason.OUTLINE;
+    else if (sprite != null) reason = Reason.SPRITE;
+    else if (color != -1) reason = Reason.TINT;
+    else {
+      var skin = avatar.skin.body().texturePath();
+      // Invisible-to-player and glowing-only bodies select other render types.
+      if (type != RenderTypes.entityTranslucent(skin)) reason = Reason.PIPELINE;
+      else {
+        // The batch type only supplies pipeline and samplers; Sampler0 becomes the skin atlas.
+        cutout = RenderTypes.entityCutout(DefaultPlayerSkin.getDefaultTexture());
+        if (pipeline(cutout) == null) reason = Reason.PIPELINE;
+        else {
+          slot = skinSlot(skin);
+          if (slot == null) reason = Reason.SKIN;
+          else if (slot == SkinSlot.PARTIAL) reason = Reason.SKIN_PARTIAL;
+          else if (slot.cell < 0) reason = Reason.SKIN;
+        }
+      }
+    }
+    if (reason == Reason.READY)
+      reason = captureBody(model, state, pose, cutout, slot, light, overlay);
+    long elapsed = System.nanoTime() - start;
+    bodyNanos += elapsed;
+    bodyNanosTotal += elapsed;
+    if (reason == Reason.READY) {
+      frameBodies++;
+      bodiesTotal++;
+      return true;
+    }
+    bodyReasons[reason.ordinal()]++;
+    frameBodyFallbacks++;
+    bodyFallbacksTotal++;
+    return false;
+  }
+
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  private static Reason captureBody(
+      Model model,
+      Object state,
+      PoseStack pose,
+      RenderType cutout,
+      SkinSlot slot,
+      int light,
+      int overlay) {
+    var batch = batch(SKINS, cutout, 0);
+    if (batch == null || batch.used + PIECE_HEADROOM > MAX_INSTANCES) return Reason.CAPACITY;
+    int start = batch.used;
+    captureBatch = batch;
+    captureUv = SKIN_UV;
+    captureOffset = slot.x | slot.y << 16;
+    raw = partFailed = false;
+    try {
+      model.setupAnim(state);
+      capturePose.setIdentity();
+      capturePose.last().set(pose.last());
+      model.renderToBuffer(capturePose, MARKER, light, overlay, -1);
+    } catch (RuntimeException failure) {
+      capturePose = new PoseStack();
+      batch.used = start;
+      block("runtime-fallback", failure);
+      return Reason.ERROR;
+    } finally {
+      captureBatch = null;
+      captureUv = null;
+      captureOffset = 0;
+    }
+    if (raw || partFailed) {
+      batch.used = start;
+      return raw ? Reason.RAW : Reason.MESH;
+    }
+    slot.frame = frame;
+    return Reason.READY;
+  }
+
+  /** The skin's atlas cell, {@link SkinSlot#PARTIAL}/{@link SkinSlot#REFUSED}, or null to retry. */
+  private static SkinSlot skinSlot(Identifier id) {
+    var texture = Minecraft.getInstance().getTextureManager().getTexture(id);
+    var slot = skins.get(texture);
+    if (slot != null) return slot;
+    try {
+      slot = admitSkin(id, texture);
+    } catch (IOException | RuntimeException failure) {
+      slot = SkinSlot.REFUSED;
+    }
+    if (slot != null && skins.size() < 1024) skins.put(texture, slot);
+    // A cell admitted or used this frame must not be evicted by a later body of the same frame.
+    if (slot != null && slot.cell >= 0) slot.frame = frame;
+    return slot;
+  }
+
+  /**
+   * Classifies a 64x64 skin by its texels and copies an eligible one into a free atlas cell with a
+   * clamped one-texel gutter. Downloaded skins keep their processed pixels in a DynamicTexture;
+   * default skins are resource-backed and reloaded from the same contents vanilla uploads.
+   */
+  private static SkinSlot admitSkin(Identifier id, AbstractTexture texture) throws IOException {
+    TextureContents contents = null;
+    NativeImage image;
+    if (texture instanceof DynamicTexture dynamic) image = dynamic.getPixels();
+    else if (texture.getClass() == SimpleTexture.class) {
+      contents = TextureContents.load(Minecraft.getInstance().getResourceManager(), id);
+      image = contents.image();
+    } else return SkinSlot.REFUSED;
+    try {
+      if (image == null
+          || image.getWidth() != SKIN_SIZE
+          || image.getHeight() != SKIN_SIZE
+          || texture.getTexture().getWidth(0) != SKIN_SIZE
+          || texture.getTexture().getHeight(0) != SKIN_SIZE) return SkinSlot.REFUSED;
+      for (int y = 0; y < SKIN_SIZE; y++)
+        for (int x = 0; x < SKIN_SIZE; x++) {
+          int alpha = image.getPixel(x, y) >>> 24;
+          if (alpha >= 26 && alpha <= 254) {
+            skinsPartial++;
+            return SkinSlot.PARTIAL;
+          }
+        }
+      int cell = freeCell();
+      if (cell < 0) return null;
+      if (skinAtlas == null) {
+        skinAtlas =
+            RenderSystem.getDevice()
+                .createTexture(
+                    "DrawLess retained skin atlas",
+                    GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING,
+                    com.mojang.blaze3d.GpuFormat.RGBA8_UNORM,
+                    ATLAS_SIZE,
+                    ATLAS_SIZE,
+                    1,
+                    1);
+        skinAtlasView = RenderSystem.getDevice().createTextureView(skinAtlas);
+      }
+      int cx = cell % SKIN_COLUMNS * SKIN_CELL, cy = cell / SKIN_COLUMNS * SKIN_CELL;
+      try (var padded = new NativeImage(SKIN_CELL, SKIN_CELL, false)) {
+        for (int y = -1; y <= SKIN_SIZE; y++)
+          for (int x = -1; x <= SKIN_SIZE; x++)
+            padded.setPixel(
+                x + 1,
+                y + 1,
+                image.getPixel(Math.clamp(x, 0, SKIN_SIZE - 1), Math.clamp(y, 0, SKIN_SIZE - 1)));
+        RenderSystem.getDevice()
+            .createCommandEncoder()
+            .writeToTexture(skinAtlas, padded, 0, 0, cx, cy);
+      }
+      var slot = new SkinSlot(cell, cx + 1, cy + 1);
+      skinCells[cell] = slot;
+      skinsAdmitted++;
+      return slot;
+    } finally {
+      if (contents != null) contents.close();
+    }
+  }
+
+  /** A free cell, else the least recently drawn one not used this frame; -1 when none. */
+  private static int freeCell() {
+    int oldest = -1;
+    for (int cell = 0; cell < skinCells.length; cell++) {
+      var slot = skinCells[cell];
+      if (slot == null) return cell;
+      if (slot.frame != frame && (oldest < 0 || slot.frame < skinCells[oldest].frame))
+        oldest = cell;
+    }
+    if (oldest < 0) return -1;
+    skins.values().remove(skinCells[oldest]);
+    skinCells[oldest] = null;
+    skinsEvicted++;
+    return oldest;
+  }
+
   private static void block(String reason, RuntimeException error) {
     if (!blocked.equals(reason))
       DrawLess.LOGGER.warn(
@@ -689,7 +941,10 @@ public final class PlayerArmorGeometry {
             + "meshBuilds=%d; indexRebuilds=%d; geometryUploadedBytes=%d; "
             + "instanceUploadedBytes=%d; atlasTextures=%d; capture=%.4fms; upload=%.4fms; "
             + "drawCpu=%.4fms; "
-            + "captureTotalMs=%.4f; uploadTotalMs=%.4f; drawTotalMs=%.4f; fallback=%s",
+            + "captureTotalMs=%.4f; uploadTotalMs=%.4f; drawTotalMs=%.4f; fallback=%s; "
+            + "bodies=%d; bodyFallbacks=%d; bodiesTotal=%d; bodyFallbacksTotal=%d; skins=%d; "
+            + "skinsAdmitted=%d; skinsPartial=%d; skinsEvicted=%d; bodyCapture=%.4fms; "
+            + "bodyCaptureTotalMs=%.4f; bodyFallback=%s",
         enabled ? "on" : blocked.isEmpty() ? "idle" : blocked,
         framePieces,
         frameFallbackPieces,
@@ -718,7 +973,28 @@ public final class PlayerArmorGeometry {
         captureNanosTotal / 1e6,
         uploadNanosTotal / 1e6,
         drawNanosTotal / 1e6,
-        reasonText.isEmpty() ? "none" : reasonText);
+        reasonText.isEmpty() ? "none" : reasonText,
+        frameBodies,
+        frameBodyFallbacks,
+        bodiesTotal,
+        bodyFallbacksTotal,
+        (int) Arrays.stream(skinCells).filter(Objects::nonNull).count(),
+        skinsAdmitted,
+        skinsPartial,
+        skinsEvicted,
+        bodyNanos / 1e6,
+        bodyNanosTotal / 1e6,
+        reasons(bodyReasons));
+  }
+
+  private static String reasons(long[] counts) {
+    var text = new StringBuilder();
+    for (var reason : Reason.values())
+      if (reason != Reason.READY && counts[reason.ordinal()] > 0) {
+        if (!text.isEmpty()) text.append(',');
+        text.append(reason.label).append(':').append(counts[reason.ordinal()]);
+      }
+    return text.isEmpty() ? "none" : text.toString();
   }
 
   private enum Reason {
@@ -731,6 +1007,9 @@ public final class PlayerArmorGeometry {
     CAPACITY("capacity"),
     MESH("mesh"),
     RAW("raw-vertices"),
+    TINT("tint"),
+    SKIN("skin-texture"),
+    SKIN_PARTIAL("skin-semi-transparent"),
     ERROR("error");
     final String label;
 
@@ -740,6 +1019,19 @@ public final class PlayerArmorGeometry {
   }
 
   private record Mesh(int firstVertex, int vertexCount) implements RetainedMesh {}
+
+  /** A skin's atlas cell (texel origin inside the gutter) and the last frame that drew it. */
+  private static final class SkinSlot {
+    static final SkinSlot REFUSED = new SkinSlot(-1, 0, 0), PARTIAL = new SkinSlot(-1, 0, 0);
+    final int cell, x, y;
+    long frame;
+
+    SkinSlot(int cell, int x, int y) {
+      this.cell = cell;
+      this.x = x;
+      this.y = y;
+    }
+  }
 
   /** Base-armor texture placement inside the atlas; exact for power-of-two sizes. */
   private record AtlasSlot(int x, int y, int width, int height) {
@@ -822,13 +1114,14 @@ public final class PlayerArmorGeometry {
 
   private static final class Batch extends RetainedBatch<Instance> {
     final int rank;
-    final boolean atlas;
+    final boolean atlas, skins;
     int pieceStart, sequence;
 
-    Batch(RenderType type, int rank, boolean atlas) {
+    Batch(RenderType type, int rank, boolean atlas, boolean skins) {
       super(type, LABEL, 4096);
       this.rank = rank;
       this.atlas = atlas;
+      this.skins = skins;
     }
 
     Instance next() {

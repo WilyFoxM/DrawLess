@@ -73,6 +73,7 @@
     "PlayerItemHandLayerMixin",
     "PlayerItemHeadLayerMixin",
     "PlayerItemStackMixin",
-    "PlayerItemSubmitMixin"
+    "PlayerItemSubmitMixin",
+    "PlayerBodySubmitMixin"
   ]
 }
