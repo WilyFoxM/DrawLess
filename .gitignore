@@ -99,3 +99,12 @@ Desktop.ini
 !/benchmarks/results/spawn-20261031/raw/benchmark-*/summary.json
 !/benchmarks/results/spawn-20261031/phase-fps.png
 !/benchmarks/results/spawn-20261031/retained-cpu.png
+!/benchmarks/results/spawn-20261101/
+!/benchmarks/results/spawn-20261101/modrinth-card.png
+!/benchmarks/results/spawn-20261101/raw/
+!/benchmarks/results/spawn-20261101/raw/SHA256SUMS.txt
+!/benchmarks/results/spawn-20261101/raw/benchmark-*/
+!/benchmarks/results/spawn-20261101/raw/benchmark-*/*.md
+!/benchmarks/results/spawn-20261101/raw/benchmark-*/summary.json
+!/benchmarks/results/spawn-20261101/phase-fps.png
+!/benchmarks/results/spawn-20261101/retained-cpu.png

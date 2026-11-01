@@ -2,7 +2,108 @@
 
 [Methodology](METHODOLOGY.md) · [0.1.0 correctness validation](VALIDATION_0.1.0.md) · [Rejected optimization experiments](../docs/REJECTED_OPTIMIZATIONS.md)
 
-Benchmark 03 is the 1.3.0 release result with default settings and other players in the scene. Benchmark 02 is a development-build/selected-preset result with no other players present. Benchmark 01 remains the published 0.1.0/default-preset result. None of them is a direct comparison between versions.
+Benchmark 04 is the 1.4.0 release result with default settings and 12–17 other player models in the scene. Benchmark 03 is the 1.3.0 release result with default settings and 8–11 other player models. Benchmark 02 is a development-build/selected-preset result with no other players present. Benchmark 01 remains the published 0.1.0/default-preset result. None of them is a direct comparison between versions.
+
+## Benchmark 04 — server spawn with players, 1.4.0
+
+**+54.58% mean paired FPS change** across three bracketed ON comparisons in one recorded series. Mean bracketed OFF baseline **122.06 FPS**; mean ON **188.61 FPS**.
+
+**This scene has more players in it than Benchmark 03.** Every phase renders **12–17 other player models** (14–19 players loaded, including me), with their bodies, armor and held items, next to **414–438 Item Displays** and roughly 1400–1600 particles. Benchmark 03 had 8–11 player models in view and a much lighter OFF baseline (about 180 FPS then, about 122 FPS now). The two percentages describe different scenes and are not a version-to-version comparison: a larger share of this frame is player rendering, which DrawLess now covers with bodies, armor and items.
+
+**Measured build: 1.4.0** (the published artifact), Sodium, default settings: master switch OFF versus the 1.4.0 defaults (Live geometry, model cache with adaptive budget, EXPANDED batching, particle caches, GPU armor, GPU items on players and GPU player bodies ON; text reuse, NPC budget and paused display ticks OFF). ImmediatelyFast and Iris are absent.
+
+[![Benchmark 04 headline](results/spawn-20261101/modrinth-card.png)](results/spawn-20261101/modrinth-card.png)
+
+### Every recorded phase
+
+The headline series is `release2`. Two more series were recorded at the same place in the same session; they are listed beside it, not added to it.
+
+| Order | Phase | Mean observed FPS | Adjacent OFF baseline | Paired change | Rendered player models (mean) |
+|---:|---|---:|---:|---:|---:|
+| 1 | OFF1 | 116.32 | — | — | 16.05 |
+| 2 | ON1 | 190.12 | 120.343 | +57.982% | 13.53 |
+| 3 | OFF2 | 124.36 | — | — | 12.90 |
+| 4 | ON2 | 185.04 | 124.290 | +48.874% | 13.21 |
+| 5 | OFF3 | 124.22 | — | — | 13.50 |
+| 6 | ON3 | 190.68 | 121.545 | +56.879% | 13.54 |
+| 7 | OFF4 | 118.87 | — | — | 13.25 |
+
+Each ON is compared with the arithmetic mean FPS of its immediately neighboring OFF phases; the headline is the arithmetic mean of the three percentage changes. All nine ON phases of the session exceed both of their neighboring OFF phases.
+
+[![All seven phases with rendered player models](results/spawn-20261101/phase-fps.png)](results/spawn-20261101/phase-fps.png)
+
+| Series | Paired changes | Mean paired change | Population-adjusted mean | OFF range/mean |
+|---|---|---:|---:|---:|
+| release1 | +59.71 / +58.45 / +65.38% | +61.18% | +62.78% | 7.92% |
+| **release2** | +57.98 / +48.87 / +56.88% | **+54.58%** | +52.89% | 6.65% |
+| release3 | +61.49 / +74.04 / +68.52% | +68.02% | +60.22% | 16.52% |
+
+I chose `release2` for the headline because it has the smallest OFF drift of the three and the lowest result. The three series are one session at one place, not independent sessions; their spread shows within-session variation only.
+
+### Players in the scene and the population adjustment
+
+Players walk in and out, so the number of rendered player models changes between phases (12–17 in `release2`). No avatar count was stable in every phase, so the exact population-matched comparison was not possible in any series. The regression-based adjustment shifts every phase to the series' mean population using a common within-phase slope of frame time per rendered player model (`release2`: 0.243 ± 0.057 ms per model). In `release2` it moves the result to +52.89%; with separate OFF and ON slopes it gives +54.58%, and the report flags that sensitivity. It is a descriptive correction for this one variable, not a model of the scene; the raw paired change stays the headline.
+
+In `release3` a crowd arrived during the first OFF phase: up to 34 rendered player models (35 loaded), falling back to about 18 by the end of the series. That series has the largest OFF drift (16.52%) and the highest raw result; the population adjustment brings it to +60.22%. It is kept and reported, not removed. During that crowd the ON phases stayed at 147 FPS with 23–28 player models, while the first OFF phase ran at 88 FPS.
+
+| Phase (`release2`) | Item Displays min–max | Bone carriers min–max | Loaded particles min–max | Loaded players min–max | Rendered player models min–max |
+|---|---:|---:|---:|---:|---:|
+| OFF1 | 414–426 | 320–330 | 1383–1558 | 17–19 | 15–17 |
+| ON1 | 414–438 | 320–340 | 1399–1541 | 16–18 | 12–15 |
+| OFF2 | 414–414 | 320–320 | 1384–1509 | 14–17 | 12–14 |
+| ON2 | 414–438 | 320–340 | 1390–1551 | 15–17 | 13–14 |
+| OFF3 | 414–416 | 320–321 | 1441–1590 | 15–16 | 13–14 |
+| ON3 | 414–416 | 320–321 | 1429–1547 | 15–16 | 13–14 |
+| OFF4 | 414–426 | 320–330 | 1401–1554 | 15–16 | 13–14 |
+
+Rendered player models are avatar render states (players and mannequins) after frustum culling, sampled over every measured frame between one-second samples; loaded players include me. The Item Display population changes by up to 24 entries during `release2`, above the 2% screening threshold. Particle counts fluctuate naturally. No samples were selected by population to replace the full-phase result.
+
+### Measured retained geometry costs
+
+[![Measured CPU scopes of the retained geometry paths](results/spawn-20261101/retained-cpu.png)](results/spawn-20261101/retained-cpu.png)
+
+Three owners keep geometry on the GPU in this scene: Item Displays (Live geometry), armor and bodies on players (one owner with shared meshes and draws) and items on players. Their measured CPU scopes are pooled over the three ON phases of `release2` (10,755 active frames per path), using first-to-last sample differences of cumulative counters, divided by frames. Body capture is reported separately by the armor owner and is included in its capture column.
+
+| Path | Capture CPU ms/frame | Upload CPU ms/frame | Draw CPU ms/frame | Sum |
+|---|---:|---:|---:|---:|
+| Item Displays | 0.234 | 0.036 | 0.082 | 0.352 |
+| Armor and bodies on players | 0.114 | 0.031 | 0.152 | 0.297 |
+| Items on players | 0.044 | 0.009 | 0.107 | 0.160 |
+
+Together the paths cost about 0.81 ms of measured CPU per frame. This is the price inside the named scopes, not the net effect: the vanilla work they replace is not counted here, and GPU execution, particle caches, feature batching and other overhead are not included. Per frame, the ON phases report 218–239 Item Display parts in one draw, 36–44 armor pieces and 11–13 player bodies in three draws (1–2 bodies with semi-transparent skins stay on the ordinary path) and 25–30 player item stacks in two to three draws (4 translucent stacks stay on the ordinary path).
+
+### Review findings and limitations
+
+- One scene, one session, one machine. No confidence interval, independent-session repeat, p95/p99, 1% low or GPU elapsed time is available.
+- OFF drift exceeds the 5% screening threshold in all three series (6.65–16.52%); the population adjustment corrects only the number of rendered player models.
+- The FPS slider was at its maximum (260, shown as Unlimited), so no frame limiter was active.
+- AFK frame throttling was paused by the series and restored afterwards.
+- The result is for the whole of DrawLess at its defaults; it does not separate Item Display, player, particle and batching contributions.
+- No synchronized pixel comparison was taken in this series.
+
+### Artifact and environment
+
+- Recorded 2026-11-01, 18:50–19:02 Europe/Moscow (UTC+03:00); `release2` 18:54–18:57. Dimension `minecraft:spawn/overworld-ba66`; camera `1.19 / 101.62 / 3.42`, yaw/pitch `126.55 / 18.57`, unchanged in all 140 samples of `release2`; first person, FOV 110, render distance 7, GUI scale 2.
+- Framebuffer 1920×1129, FPS slider 260 (Unlimited), VSync OFF, resource packs `vanilla` and a server resource pack, detailed profiler OFF. All phases completed with 20 samples, zero excluded menu frames and zero unfocused measured frames.
+- Artifact: `drawless-1.4.0.jar`; SHA-256 `493c04b1225463a013740312d5646c4a75f670b11f0c9c4fc66ca2626f21854e`. Source: `58e765ee18ef0747845534efa7d4c1be628e2d4f` (merged as `d94aab6ac91ad74e2774c4c1b3db2a20e342643e`).
+- Minecraft 26.2, Fabric Loader 0.20.0, Fabric API 0.161.0+26.2, Sodium 0.9.2+mc26.2, Java 25.0.4. AMD Ryzen 5 5600H; NVIDIA GeForce RTX 3060 Laptop GPU (hardware from the current system inventory, not from the series files).
+- Settings before each series were the 1.4.0 defaults; each series restored them afterwards.
+
+### Raw measurements and hashes
+
+Original files of all three series, byte-for-byte: [`results/spawn-20261101/raw/`](results/spawn-20261101/raw/), with SHA-256 for every file in [`SHA256SUMS.txt`](results/spawn-20261101/raw/SHA256SUMS.txt). Each series folder holds its generated summary (`README.md`, `summary.json`) and the seven phase reports.
+
+| Phase (`release2`) | Original file | SHA-256 |
+|---|---|---|
+| OFF1 | [drawless-20261101-185442-811-release2_off1.md](results/spawn-20261101/raw/benchmark-20261101-185420-781-release2/drawless-20261101-185442-811-release2_off1.md) | `723dae8e16231014a5c73c59858931e6cd0fd8e7323306614561187440bf1e7b` |
+| ON1 | [drawless-20261101-185504-823-release2_on1.md](results/spawn-20261101/raw/benchmark-20261101-185420-781-release2/drawless-20261101-185504-823-release2_on1.md) | `1ec3a243263ef3149e0f731f92fe6b96aebac80f3184bf978fcab2f354ed8b97` |
+| OFF2 | [drawless-20261101-185526-837-release2_off2.md](results/spawn-20261101/raw/benchmark-20261101-185420-781-release2/drawless-20261101-185526-837-release2_off2.md) | `8d8a876d39ee6b351116a076da94a893493a80b62ec5b3caa44caef49e3dcbce` |
+| ON2 | [drawless-20261101-185548-854-release2_on2.md](results/spawn-20261101/raw/benchmark-20261101-185420-781-release2/drawless-20261101-185548-854-release2_on2.md) | `0297dc591965a67e9bede56672daeb88eefb21586b9d34bee15e7c91f6ada9ea` |
+| OFF3 | [drawless-20261101-185610-873-release2_off3.md](results/spawn-20261101/raw/benchmark-20261101-185420-781-release2/drawless-20261101-185610-873-release2_off3.md) | `8dbe14a7a4040847ac46b1b4ff3943d9ee97015dfb3abce65de4a5f0146bb252` |
+| ON3 | [drawless-20261101-185632-889-release2_on3.md](results/spawn-20261101/raw/benchmark-20261101-185420-781-release2/drawless-20261101-185632-889-release2_on3.md) | `72bd3644f51b3f571b40766180e314807820098071d9b55f415ed70bc6216a32` |
+| OFF4 | [drawless-20261101-185654-907-release2_off4.md](results/spawn-20261101/raw/benchmark-20261101-185420-781-release2/drawless-20261101-185654-907-release2_off4.md) | `960a2f072da01adf8fe9fc3906cf8189c5bf8b419b52c80a3f85262eb19e739e` |
+
+---
 
 ## Benchmark 03 — server spawn with players, 1.3.0
 
@@ -75,7 +176,7 @@ Together the three paths cost about 0.55 ms of measured CPU per frame. This is t
 ### Review findings and limitations
 
 - One scene, one session, one machine. No confidence interval, independent-session repeat, p95/p99, 1% low or GPU elapsed time is available.
-- The FPS limit was 260. Per-second ON values reached at most 252 FPS, below the limit, but a limit close to the measured values can still trim individual frames.
+- The FPS slider was at its maximum (260, shown as Unlimited), so no frame limiter was active; per-second ON values reached at most 252 FPS. (Corrected 2026-11-01: an earlier version of this item treated 260 as an active limit.)
 - AFK frame throttling was paused by the series and restored afterwards.
 - The result is for the whole of DrawLess at its defaults; it does not separate Item Display, player, particle and batching contributions.
 - No synchronized pixel comparison was taken in this series.
@@ -83,7 +184,7 @@ Together the three paths cost about 0.55 ms of measured CPU per frame. This is t
 ### Artifact and environment
 
 - Recorded 2026-10-31, 22:10–22:18 Europe/Moscow (UTC+03:00). Dimension `minecraft:spawn/overworld-41f2`; camera `-8.79 / 100.62 / -5.55`, yaw/pitch `112.47 / 4.27`, unchanged in all 420 samples; first person, FOV 110, render distance 7, GUI scale 2.
-- Framebuffer 1920×1129, FPS limit 260, VSync OFF, resource packs `vanilla` and a server resource pack, detailed profiler OFF. All phases completed with 20 samples, zero excluded menu frames and zero unfocused measured frames.
+- Framebuffer 1920×1129, FPS slider 260 (Unlimited), VSync OFF, resource packs `vanilla` and a server resource pack, detailed profiler OFF. All phases completed with 20 samples, zero excluded menu frames and zero unfocused measured frames.
 - Artifact: `drawless-1.3.0.jar`; SHA-256 `a3a717007d1cb78096f48916a6aaf39693e6415d319b079a975c0e1d38c8038b`. Source: `13eda58ba949e6bf145b2a720e175cd1e686913d`.
 - Minecraft 26.2, Fabric Loader 0.20.0, Fabric API 0.161.0+26.2, Sodium 0.9.2+mc26.2, Java 25.0.4. AMD Ryzen 5 5600H; NVIDIA GeForce RTX 3060 Laptop GPU (hardware from the current system inventory, not from the series files).
 - Settings before each series were the 1.3.0 defaults; each series restored them afterwards.
