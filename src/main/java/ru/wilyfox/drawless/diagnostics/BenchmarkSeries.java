@@ -62,7 +62,7 @@ public final class BenchmarkSeries {
                   || this == PLAYER_ARMOR
                   || this == PLAYER_ITEMS
                   || this == PLAYER_BODY)
-              && RenderModSupport.IRIS
+              && ru.wilyfox.drawless.compat.IrisShaders.packInUse()
           || this == PLAYER_BODY && RenderModSupport.PLAYER_MODEL_MODS
           || (this == PARTICLES || this == PARTICLE_LIGHT || this == PARTICLE_COLLISION)
               && !RenderModSupport.PARTICLE_CACHES;
@@ -379,7 +379,8 @@ public final class BenchmarkSeries {
               + "; resourcePacks="
               + client.options.resourcePacks
               + "; profiler="
-              + RenderMetrics.getInstance().isEnabled());
+              + RenderMetrics.getInstance().isEnabled()
+              + ru.wilyfox.drawless.compat.IrisShaders.environment());
     }
   }
 

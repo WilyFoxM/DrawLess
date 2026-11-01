@@ -666,7 +666,11 @@ public final class DisplayProbe {
               + "; Sodium "
               + net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("sodium")
               + "; ImmediatelyFast "
-              + net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("immediatelyfast");
+              + net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("immediatelyfast")
+              + "; Iris "
+              + ru.wilyfox.drawless.compat.RenderModSupport.IRIS
+              + "; shader pack "
+              + ru.wilyfox.drawless.compat.IrisShaders.packInUse();
     }
   }
 

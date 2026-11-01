@@ -40,6 +40,7 @@ import net.minecraft.resources.Identifier;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL31;
 import ru.wilyfox.drawless.DrawLess;
+import ru.wilyfox.drawless.compat.IrisShaders;
 import ru.wilyfox.drawless.compat.RenderModSupport;
 import ru.wilyfox.drawless.config.DrawLessConfig;
 import ru.wilyfox.drawless.mixin.ModelPartCubesAccessor;
@@ -155,15 +156,15 @@ public final class PlayerArmorGeometry {
 
   private static boolean armorRequested() {
     var config = DrawLessConfig.get();
-    return config.enabled && config.playerArmorGeometry && !RenderModSupport.IRIS;
+    return config.enabled && config.playerArmorGeometry && !IrisShaders.packInUse();
   }
 
   private static boolean bodyRequested() {
     var config = DrawLessConfig.get();
     return config.enabled
         && config.playerBodyGeometry
-        && !RenderModSupport.IRIS
-        && !RenderModSupport.PLAYER_MODEL_MODS;
+        && !RenderModSupport.PLAYER_MODEL_MODS
+        && !IrisShaders.packInUse();
   }
 
   /** Resource reload replaces model parts and atlas sprites; pipelines follow the device. */
@@ -921,7 +922,7 @@ public final class PlayerArmorGeometry {
   }
 
   public static String diagnostic() {
-    if (!requested()) return "status=off";
+    if (!requested()) return IrisShaders.packInUse() ? "status=shader-pack" : "status=off";
     int meshes = 0;
     for (var part : parts.values())
       if (part.supported) meshes += (part.plain == null ? 0 : 1) + part.mapped.size();

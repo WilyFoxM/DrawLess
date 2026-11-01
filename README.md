@@ -66,10 +66,12 @@ Existing configurations are preserved when updating.
 
 DrawLess works standalone or with Sodium; Sodium **0.9.2** is the tested version.
 With **ImmediatelyFast**, overlapping text and batching optimizations are disabled
-in DrawLess. With **Iris**, feature batching, GPU armor, GPU items on players and
-GPU player bodies are disabled and Live geometry uses ordinary rendering. GPU player
-bodies are also disabled with mods that change player models or skins (3D Skin Layers,
-Entity Model Features, Entity Texture Features, Figura, CPM). Unavailable controls explain why they cannot be changed.
+in DrawLess. With **Iris** (**1.11.4** tested), DrawLess optimizations stay active while
+shaders are off. While a shader pack is active, feature batching, GPU armor, GPU items on
+players and GPU player bodies are paused and Live geometry uses ordinary rendering; they
+resume when shaders are turned off. GPU player bodies are also disabled with mods that
+change player models or skins (3D Skin Layers, Entity Model Features, Entity Texture
+Features, Figura, CPM). Unavailable controls explain why they cannot be changed.
 With **Particle Core** or **AsyncParticles**, DrawLess disables its overlapping
 particle caches. Iris and recognized dynamic-light integrations limit light reuse
 to the current rendering pass.

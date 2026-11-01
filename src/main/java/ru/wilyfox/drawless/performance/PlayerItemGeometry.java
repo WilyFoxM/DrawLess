@@ -24,6 +24,7 @@ import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.world.item.ItemDisplayContext;
 import ru.wilyfox.drawless.DrawLess;
+import ru.wilyfox.drawless.compat.IrisShaders;
 import ru.wilyfox.drawless.compat.RenderModSupport;
 import ru.wilyfox.drawless.config.DrawLessConfig;
 
@@ -77,7 +78,7 @@ public final class PlayerItemGeometry {
 
   public static boolean requested() {
     var config = DrawLessConfig.get();
-    return config.enabled && config.playerItemGeometry && !RenderModSupport.IRIS;
+    return config.enabled && config.playerItemGeometry && !IrisShaders.packInUse();
   }
 
   /** Mesh and pipeline lifetime belongs to {@link ItemMeshes}; only frame state is dropped. */
@@ -377,7 +378,7 @@ public final class PlayerItemGeometry {
   }
 
   public static String diagnostic() {
-    if (!requested()) return "status=off";
+    if (!requested()) return IrisShaders.packInUse() ? "status=shader-pack" : "status=off";
     var reasonText = new StringBuilder();
     for (var reason : Reason.values())
       if (reason != Reason.READY && reasons[reason.ordinal()] > 0) {

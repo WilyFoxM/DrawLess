@@ -20,7 +20,7 @@
   "drawless.hint.choice": "ЛКМ: следующий вариант. ПКМ: предыдущий. На клавиатуре: стрелки влево/вправо.",
   "drawless.hint.number": "Тяните значение влево/вправо. Shift — точная настройка. На клавиатуре: стрелки влево/вправо.",
   "drawless.unavailable.if": "Этой функцией управляет ImmediatelyFast. Сохранённая настройка DrawLess не меняется.",
-  "drawless.unavailable.iris": "Недоступно с Iris. Сохранённая настройка DrawLess не меняется.",
+  "drawless.unavailable.shader_pack": "Недоступно, пока включён шейдерпак Iris. Сохранённая настройка DrawLess не меняется.",
   "drawless.page.rendering": "Рендер",
   "drawless.page.particles": "Частицы",
   "drawless.page.advanced": "Расширенные",

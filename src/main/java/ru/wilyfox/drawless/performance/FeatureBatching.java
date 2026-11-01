@@ -4,6 +4,7 @@ import com.mojang.blaze3d.systems.ScissorState;
 import java.util.List;
 import java.util.Objects;
 import net.minecraft.client.renderer.rendertype.PreparedRenderType;
+import ru.wilyfox.drawless.compat.IrisShaders;
 import ru.wilyfox.drawless.compat.RenderModSupport;
 import ru.wilyfox.drawless.config.DrawLessConfig;
 
@@ -18,7 +19,7 @@ public final class FeatureBatching {
     return config.enabled
         && config.featureBatching
         && !RenderModSupport.IMMEDIATELY_FAST
-        && !RenderModSupport.IRIS;
+        && !IrisShaders.packInUse();
   }
 
   public static boolean reorders() {
