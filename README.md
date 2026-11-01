@@ -88,19 +88,18 @@ Keep **Live geometry** selected for normal play.
 
 ## Measured performance
 
-[![Benchmark 03: +29.24% mean paired FPS change on a server spawn with players, DrawLess 1.3.0](benchmarks/results/spawn-20261031/modrinth-card.png)](benchmarks/README.md)
+[![Benchmark 04: +54.58% mean paired FPS change on a server spawn with players, DrawLess 1.4.0](benchmarks/results/spawn-20261101/modrinth-card.png)](benchmarks/README.md)
 
-A busy server spawn **with other players in view** measured **+29.24% mean
-paired FPS change** (**179.50 → 231.99 FPS**) with **1.3.0**, Sodium and default
-settings. The scene renders 8–11 player models with their armor and held items
-next to about 430 Item Displays. Two more series in the same session measured
-+28.45% and +30.49%. Tested on a Ryzen 5 5600H / RTX 3060 Laptop GPU.
+A busy server spawn **with other players in view** measured **+54.58% mean
+paired FPS change** (**122.06 → 188.61 FPS**) with **1.4.0**, Sodium and default
+settings. The scene renders 12–17 player models with their bodies, armor and held
+items next to about 420 Item Displays. Two more series in the same session measured
++61.18% and +68.02%. Tested on a Ryzen 5 5600H / RTX 3060 Laptop GPU.
 
-Earlier benchmarks were recorded with no other players present; this one
-covers the whole populated scene, so its percentage is not a version-to-version
-comparison. It is a scene-specific result from one session. See the
-[full report](benchmarks/README.md) for all phases, the population adjustment,
-raw measurements, conditions and limitations.
+This scene had more players in view than the 1.3.0 benchmark, so the percentages
+are not a version-to-version comparison. It is a scene-specific result from one
+session. See the [full report](benchmarks/README.md) for all phases, the population
+adjustment, raw measurements, conditions and limitations.
 
 ## Attributions
 
