@@ -1,6 +1,6 @@
 # DrawLess benchmarks
 
-[Methodology](METHODOLOGY.md) · [0.1.0 correctness validation](VALIDATION_0.1.0.md) · [Rejected optimization experiments](../docs/REJECTED_OPTIMIZATIONS.md)
+[Methodology](METHODOLOGY.md) · [0.1.0 correctness validation](VALIDATION_0.1.0.md) · [Rejected optimization experiments](../docs/REJECTED_OPTIMIZATIONS.md) · [Raw benchmark data](https://github.com/WilyFoxM/DrawLess-benchmarks)
 
 Benchmark 04 is the 1.4.0 release result with default settings and 12–17 other player models in the scene. Benchmark 03 is the 1.3.0 release result with default settings and 8–11 other player models. Benchmark 02 is a development-build/selected-preset result with no other players present. Benchmark 01 remains the published 0.1.0/default-preset result. None of them is a direct comparison between versions.
 
@@ -91,17 +91,17 @@ Together the paths cost about 0.81 ms of measured CPU per frame. This is the pri
 
 ### Raw measurements and hashes
 
-Original files of all three series, byte-for-byte: [`results/spawn-20261101/raw/`](results/spawn-20261101/raw/), with SHA-256 for every file in [`SHA256SUMS.txt`](results/spawn-20261101/raw/SHA256SUMS.txt). Each series folder holds its generated summary (`README.md`, `summary.json`) and the seven phase reports.
+Original files of all three series, byte-for-byte: [`DrawLess-benchmarks/spawn-20261101/raw/`](https://github.com/WilyFoxM/DrawLess-benchmarks/tree/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261101/raw), with SHA-256 for every file in [`SHA256SUMS.txt`](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261101/raw/SHA256SUMS.txt). Each series folder holds its generated summary (`README.md`, `summary.json`) and the seven phase reports.
 
 | Phase (`release2`) | Original file | SHA-256 |
 |---|---|---|
-| OFF1 | [drawless-20261101-185442-811-release2_off1.md](results/spawn-20261101/raw/benchmark-20261101-185420-781-release2/drawless-20261101-185442-811-release2_off1.md) | `723dae8e16231014a5c73c59858931e6cd0fd8e7323306614561187440bf1e7b` |
-| ON1 | [drawless-20261101-185504-823-release2_on1.md](results/spawn-20261101/raw/benchmark-20261101-185420-781-release2/drawless-20261101-185504-823-release2_on1.md) | `1ec3a243263ef3149e0f731f92fe6b96aebac80f3184bf978fcab2f354ed8b97` |
-| OFF2 | [drawless-20261101-185526-837-release2_off2.md](results/spawn-20261101/raw/benchmark-20261101-185420-781-release2/drawless-20261101-185526-837-release2_off2.md) | `8d8a876d39ee6b351116a076da94a893493a80b62ec5b3caa44caef49e3dcbce` |
-| ON2 | [drawless-20261101-185548-854-release2_on2.md](results/spawn-20261101/raw/benchmark-20261101-185420-781-release2/drawless-20261101-185548-854-release2_on2.md) | `0297dc591965a67e9bede56672daeb88eefb21586b9d34bee15e7c91f6ada9ea` |
-| OFF3 | [drawless-20261101-185610-873-release2_off3.md](results/spawn-20261101/raw/benchmark-20261101-185420-781-release2/drawless-20261101-185610-873-release2_off3.md) | `8dbe14a7a4040847ac46b1b4ff3943d9ee97015dfb3abce65de4a5f0146bb252` |
-| ON3 | [drawless-20261101-185632-889-release2_on3.md](results/spawn-20261101/raw/benchmark-20261101-185420-781-release2/drawless-20261101-185632-889-release2_on3.md) | `72bd3644f51b3f571b40766180e314807820098071d9b55f415ed70bc6216a32` |
-| OFF4 | [drawless-20261101-185654-907-release2_off4.md](results/spawn-20261101/raw/benchmark-20261101-185420-781-release2/drawless-20261101-185654-907-release2_off4.md) | `960a2f072da01adf8fe9fc3906cf8189c5bf8b419b52c80a3f85262eb19e739e` |
+| OFF1 | [drawless-20261101-185442-811-release2_off1.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261101/raw/benchmark-20261101-185420-781-release2/drawless-20261101-185442-811-release2_off1.md) | `723dae8e16231014a5c73c59858931e6cd0fd8e7323306614561187440bf1e7b` |
+| ON1 | [drawless-20261101-185504-823-release2_on1.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261101/raw/benchmark-20261101-185420-781-release2/drawless-20261101-185504-823-release2_on1.md) | `1ec3a243263ef3149e0f731f92fe6b96aebac80f3184bf978fcab2f354ed8b97` |
+| OFF2 | [drawless-20261101-185526-837-release2_off2.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261101/raw/benchmark-20261101-185420-781-release2/drawless-20261101-185526-837-release2_off2.md) | `8d8a876d39ee6b351116a076da94a893493a80b62ec5b3caa44caef49e3dcbce` |
+| ON2 | [drawless-20261101-185548-854-release2_on2.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261101/raw/benchmark-20261101-185420-781-release2/drawless-20261101-185548-854-release2_on2.md) | `0297dc591965a67e9bede56672daeb88eefb21586b9d34bee15e7c91f6ada9ea` |
+| OFF3 | [drawless-20261101-185610-873-release2_off3.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261101/raw/benchmark-20261101-185420-781-release2/drawless-20261101-185610-873-release2_off3.md) | `8dbe14a7a4040847ac46b1b4ff3943d9ee97015dfb3abce65de4a5f0146bb252` |
+| ON3 | [drawless-20261101-185632-889-release2_on3.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261101/raw/benchmark-20261101-185420-781-release2/drawless-20261101-185632-889-release2_on3.md) | `72bd3644f51b3f571b40766180e314807820098071d9b55f415ed70bc6216a32` |
+| OFF4 | [drawless-20261101-185654-907-release2_off4.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261101/raw/benchmark-20261101-185420-781-release2/drawless-20261101-185654-907-release2_off4.md) | `960a2f072da01adf8fe9fc3906cf8189c5bf8b419b52c80a3f85262eb19e739e` |
 
 ---
 
@@ -191,17 +191,17 @@ Together the three paths cost about 0.55 ms of measured CPU per frame. This is t
 
 ### Raw measurements and hashes
 
-Original files of all three series, byte-for-byte: [`results/spawn-20261031/raw/`](results/spawn-20261031/raw/), with SHA-256 for every file in [`SHA256SUMS.txt`](results/spawn-20261031/raw/SHA256SUMS.txt). Each series folder holds its generated summary (`README.md`, `summary.json`) and the seven phase reports.
+Original files of all three series, byte-for-byte: [`DrawLess-benchmarks/spawn-20261031/raw/`](https://github.com/WilyFoxM/DrawLess-benchmarks/tree/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261031/raw), with SHA-256 for every file in [`SHA256SUMS.txt`](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261031/raw/SHA256SUMS.txt). Each series folder holds its generated summary (`README.md`, `summary.json`) and the seven phase reports.
 
 | Phase (`release2`) | Original file | SHA-256 |
 |---|---|---|
-| OFF1 | [drawless-20261031-221329-204-release2_off1.md](results/spawn-20261031/raw/benchmark-20261031-221307-194-release2/drawless-20261031-221329-204-release2_off1.md) | `8a3558c7e54f62423357a881e42e6f97cb17d82e915f91a739c62ec7720c120c` |
-| ON1 | [drawless-20261031-221351-214-release2_on1.md](results/spawn-20261031/raw/benchmark-20261031-221307-194-release2/drawless-20261031-221351-214-release2_on1.md) | `1ef4a018cd0959d4b9de2c516e5ef62b74fcc9ad3f9d3e9f937a7f0d3002be2e` |
-| OFF2 | [drawless-20261031-221413-225-release2_off2.md](results/spawn-20261031/raw/benchmark-20261031-221307-194-release2/drawless-20261031-221413-225-release2_off2.md) | `826095e42e66ab97f4e4172dd6e065557afd9dab615fe608e960406e5b8aaeeb` |
-| ON2 | [drawless-20261031-221435-234-release2_on2.md](results/spawn-20261031/raw/benchmark-20261031-221307-194-release2/drawless-20261031-221435-234-release2_on2.md) | `7f7457c7aecc0664d2c4ce9b77d4618d68cf0b19c089c8aa2ff78cf9ea3b5d0e` |
-| OFF3 | [drawless-20261031-221457-248-release2_off3.md](results/spawn-20261031/raw/benchmark-20261031-221307-194-release2/drawless-20261031-221457-248-release2_off3.md) | `5bba1082d04ed51069fa68475abc55373971039022d56eb3891471f112500914` |
-| ON3 | [drawless-20261031-221519-260-release2_on3.md](results/spawn-20261031/raw/benchmark-20261031-221307-194-release2/drawless-20261031-221519-260-release2_on3.md) | `e9aa98202d034a998224459a20d7d7f333cf233fb196c0789340bffbb11696b6` |
-| OFF4 | [drawless-20261031-221541-268-release2_off4.md](results/spawn-20261031/raw/benchmark-20261031-221307-194-release2/drawless-20261031-221541-268-release2_off4.md) | `709b0ad779085fbf1af7ffe110f72efa38d9981180fefd13aaad0d8702c4a619` |
+| OFF1 | [drawless-20261031-221329-204-release2_off1.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261031/raw/benchmark-20261031-221307-194-release2/drawless-20261031-221329-204-release2_off1.md) | `8a3558c7e54f62423357a881e42e6f97cb17d82e915f91a739c62ec7720c120c` |
+| ON1 | [drawless-20261031-221351-214-release2_on1.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261031/raw/benchmark-20261031-221307-194-release2/drawless-20261031-221351-214-release2_on1.md) | `1ef4a018cd0959d4b9de2c516e5ef62b74fcc9ad3f9d3e9f937a7f0d3002be2e` |
+| OFF2 | [drawless-20261031-221413-225-release2_off2.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261031/raw/benchmark-20261031-221307-194-release2/drawless-20261031-221413-225-release2_off2.md) | `826095e42e66ab97f4e4172dd6e065557afd9dab615fe608e960406e5b8aaeeb` |
+| ON2 | [drawless-20261031-221435-234-release2_on2.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261031/raw/benchmark-20261031-221307-194-release2/drawless-20261031-221435-234-release2_on2.md) | `7f7457c7aecc0664d2c4ce9b77d4618d68cf0b19c089c8aa2ff78cf9ea3b5d0e` |
+| OFF3 | [drawless-20261031-221457-248-release2_off3.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261031/raw/benchmark-20261031-221307-194-release2/drawless-20261031-221457-248-release2_off3.md) | `5bba1082d04ed51069fa68475abc55373971039022d56eb3891471f112500914` |
+| ON3 | [drawless-20261031-221519-260-release2_on3.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261031/raw/benchmark-20261031-221307-194-release2/drawless-20261031-221519-260-release2_on3.md) | `e9aa98202d034a998224459a20d7d7f333cf233fb196c0789340bffbb11696b6` |
+| OFF4 | [drawless-20261031-221541-268-release2_off4.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261031/raw/benchmark-20261031-221307-194-release2/drawless-20261031-221541-268-release2_off4.md) | `709b0ad779085fbf1af7ffe110f72efa38d9981180fefd13aaad0d8702c4a619` |
 
 ---
 
@@ -279,13 +279,13 @@ Each ON sample reports 162 cached meshes, 455424 bytes of local geometry and one
 
 | Phase | Original file | SHA-256 |
 |---|---|---|
-| OFF1 | [drawless-20261017-155121-748-off1.md](results/spawn-20261017/raw/drawless-20261017-155121-748-off1.md) | `f061a81a9c8bf97392cbffe2d26d75bb0101afd7e347f7c2ebf6389f5ee9a16f` |
-| ON1 | [drawless-20261017-155151-299-on1.md](results/spawn-20261017/raw/drawless-20261017-155151-299-on1.md) | `e7a4b3a4a800458dcd0c75a6beea4e8cf3e44ad8ed98f9d775513cd4694adbed` |
-| OFF2 | [drawless-20261017-155220-742-off2.md](results/spawn-20261017/raw/drawless-20261017-155220-742-off2.md) | `d82af6db10519fc0076641a8a399da302eb361e4ba561b3c13db24d6e12449a7` |
-| ON2 | [drawless-20261017-155250-548-on2.md](results/spawn-20261017/raw/drawless-20261017-155250-548-on2.md) | `cd90c0397e0c2c9b80471d750a5364778ceaf93f14305ffbf5f96242ea2be147` |
-| OFF3 | [drawless-20261017-155320-522-off3.md](results/spawn-20261017/raw/drawless-20261017-155320-522-off3.md) | `92f9a5106dfd4f7d9dff72162a626ae8d23a35d01829dc2f1cef800589aab072` |
-| ON3 | [drawless-20261017-155351-381-on3.md](results/spawn-20261017/raw/drawless-20261017-155351-381-on3.md) | `2d0e3c2dd2179371183c42c96801ab4dc337272f31fc03413e2e89f765cb621c` |
-| OFF4 | [drawless-20261017-155422-642-off4.md](results/spawn-20261017/raw/drawless-20261017-155422-642-off4.md) | `7ef7de13b457a709617a546cd1c5ed238401d28217c2e22d5ef28046fb9df429` |
+| OFF1 | [drawless-20261017-155121-748-off1.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261017/raw/drawless-20261017-155121-748-off1.md) | `f061a81a9c8bf97392cbffe2d26d75bb0101afd7e347f7c2ebf6389f5ee9a16f` |
+| ON1 | [drawless-20261017-155151-299-on1.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261017/raw/drawless-20261017-155151-299-on1.md) | `e7a4b3a4a800458dcd0c75a6beea4e8cf3e44ad8ed98f9d775513cd4694adbed` |
+| OFF2 | [drawless-20261017-155220-742-off2.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261017/raw/drawless-20261017-155220-742-off2.md) | `d82af6db10519fc0076641a8a399da302eb361e4ba561b3c13db24d6e12449a7` |
+| ON2 | [drawless-20261017-155250-548-on2.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261017/raw/drawless-20261017-155250-548-on2.md) | `cd90c0397e0c2c9b80471d750a5364778ceaf93f14305ffbf5f96242ea2be147` |
+| OFF3 | [drawless-20261017-155320-522-off3.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261017/raw/drawless-20261017-155320-522-off3.md) | `92f9a5106dfd4f7d9dff72162a626ae8d23a35d01829dc2f1cef800589aab072` |
+| ON3 | [drawless-20261017-155351-381-on3.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261017/raw/drawless-20261017-155351-381-on3.md) | `2d0e3c2dd2179371183c42c96801ab4dc337272f31fc03413e2e89f765cb621c` |
+| OFF4 | [drawless-20261017-155422-642-off4.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261017/raw/drawless-20261017-155422-642-off4.md) | `7ef7de13b457a709617a546cd1c5ed238401d28217c2e22d5ef28046fb9df429` |
 
 All raw files are preserved byte-for-byte. This report and figures describe the observed series, including its control drift and workload changes. The older Benchmark 01 remains a separate 0.1.0 result.
 
@@ -404,14 +404,14 @@ and remain local. These results describe one recorded scene and one session.
 ### Original inputs
 
 All seven original reports are preserved byte-for-byte in
-[raw/](results/spawn-20261016/raw/). The identifiers below verify their contents.
+[`DrawLess-benchmarks/spawn-20261016/raw/`](https://github.com/WilyFoxM/DrawLess-benchmarks/tree/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261016/raw). The identifiers below verify their contents.
 
 | Phase | Original report | SHA-256 |
 |---|---|---|
-| OFF1 | [drawless-20261016-235418-647-spawn_off1.md](results/spawn-20261016/raw/drawless-20261016-235418-647-spawn_off1.md) | `7fc51a27493a133999a10a159c7d2a6e04bcfa272746ca2d811d7612e9f90001` |
-| ON1 | [drawless-20261016-235458-741-spawn_on1.md](results/spawn-20261016/raw/drawless-20261016-235458-741-spawn_on1.md) | `f7e392f98d91cd959f0c1dedafe73a19ea9e56bf7a84c5a36415046b5dbed7ea` |
-| OFF2 | [drawless-20261016-235533-511-spawn_off2.md](results/spawn-20261016/raw/drawless-20261016-235533-511-spawn_off2.md) | `8f82da9e96b2bada78a3a4f64ca61ff7bd65c28f0983d9eb85bb07516d8a0a6e` |
-| ON2 | [drawless-20261016-235609-317-spawn_on2.md](results/spawn-20261016/raw/drawless-20261016-235609-317-spawn_on2.md) | `58ad8326e3bf530b827149532cc35fe306816cd674f3f875d44f931ea31a5df0` |
-| OFF3 | [drawless-20261016-235743-952-spawn_off3.md](results/spawn-20261016/raw/drawless-20261016-235743-952-spawn_off3.md) | `a5e77f23a102ceb9a5cf2be302d63b2a2a41a7f41986565ae943688622bbee61` |
-| ON3 | [drawless-20261016-235820-613-spawn_on3.md](results/spawn-20261016/raw/drawless-20261016-235820-613-spawn_on3.md) | `b2ba73790f4ed83e1515ea5aa0fc477eaf8f3d5188a3c04cc3737e8a833e58d5` |
-| OFF4 | [drawless-20261016-235902-841-spawn_off4.md](results/spawn-20261016/raw/drawless-20261016-235902-841-spawn_off4.md) | `3c506e1b5025597304cc5de708cd0eefaec1449d4547a0ec104862a6d8b03a88` |
+| OFF1 | [drawless-20261016-235418-647-spawn_off1.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261016/raw/drawless-20261016-235418-647-spawn_off1.md) | `7fc51a27493a133999a10a159c7d2a6e04bcfa272746ca2d811d7612e9f90001` |
+| ON1 | [drawless-20261016-235458-741-spawn_on1.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261016/raw/drawless-20261016-235458-741-spawn_on1.md) | `f7e392f98d91cd959f0c1dedafe73a19ea9e56bf7a84c5a36415046b5dbed7ea` |
+| OFF2 | [drawless-20261016-235533-511-spawn_off2.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261016/raw/drawless-20261016-235533-511-spawn_off2.md) | `8f82da9e96b2bada78a3a4f64ca61ff7bd65c28f0983d9eb85bb07516d8a0a6e` |
+| ON2 | [drawless-20261016-235609-317-spawn_on2.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261016/raw/drawless-20261016-235609-317-spawn_on2.md) | `58ad8326e3bf530b827149532cc35fe306816cd674f3f875d44f931ea31a5df0` |
+| OFF3 | [drawless-20261016-235743-952-spawn_off3.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261016/raw/drawless-20261016-235743-952-spawn_off3.md) | `a5e77f23a102ceb9a5cf2be302d63b2a2a41a7f41986565ae943688622bbee61` |
+| ON3 | [drawless-20261016-235820-613-spawn_on3.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261016/raw/drawless-20261016-235820-613-spawn_on3.md) | `b2ba73790f4ed83e1515ea5aa0fc477eaf8f3d5188a3c04cc3737e8a833e58d5` |
+| OFF4 | [drawless-20261016-235902-841-spawn_off4.md](https://github.com/WilyFoxM/DrawLess-benchmarks/blob/2f36fc071efb731d1f21b280535f974379edfd10/spawn-20261016/raw/drawless-20261016-235902-841-spawn_off4.md) | `3c506e1b5025597304cc5de708cd0eefaec1449d4547a0ec104862a6d8b03a88` |
