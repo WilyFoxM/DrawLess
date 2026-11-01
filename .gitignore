@@ -1,6 +1,8 @@
 .gradle/
 build/
 run/
+# Owner field measurements and their analyses; kept outside build/ so clean builds keep them.
+/field-data/
 .kotlin/
 out/
 bin/
