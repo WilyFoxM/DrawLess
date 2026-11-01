@@ -96,6 +96,10 @@ settings. The scene renders 12–17 player models with their bodies, armor and h
 items next to about 420 Item Displays. Two more series in the same session measured
 +61.18% and +68.02%. Tested on a Ryzen 5 5600H / RTX 3060 Laptop GPU.
 
+I cross-checked it the same evening with PresentMon, a frame-time tool outside
+DrawLess: switching DrawLess off and on gave +38% and +41% in a somewhat lighter
+scene, with p95/p99 frame times about 20% shorter.
+
 This scene had more players in view than the 1.3.0 benchmark, so the percentages
 are not a version-to-version comparison. It is a scene-specific result from one
 session. See the [full report](benchmarks/README.md) for all phases, the population
