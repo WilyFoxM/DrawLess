@@ -15,20 +15,15 @@ public final class DrawLessMixinPlugin implements IMixinConfigPlugin {
       return RenderModSupport.TEMPORAL_PARTICLE_LIGHT;
     if (mixin.endsWith(".ParticleLightCacheMixin") || mixin.endsWith(".ParticleCollisionMixin"))
       return RenderModSupport.PARTICLE_CACHES;
-    if (mixin.endsWith(".FeatureBatchingMixin")) {
-      return !RenderModSupport.IMMEDIATELY_FAST && !RenderModSupport.IRIS;
-    }
+    if (mixin.endsWith(".FeatureBatchingMixin")) return !RenderModSupport.IMMEDIATELY_FAST;
     if (mixin.endsWith(".TextBufferReuseMixin") || mixin.endsWith(".StagedBufferReuseAccessor")) {
       return !RenderModSupport.IMMEDIATELY_FAST;
     }
     // Sodium replaces the vanilla section graph that this diagnostic reads.
     if (mixin.endsWith(".DisplayProbeViewAreaAccessor")) return !RenderModSupport.SODIUM;
-    // Shader packs replace the entity programs that retained armor derives its pipelines from.
-    if (mixin.contains(".PlayerBody"))
-      return !RenderModSupport.IRIS && !RenderModSupport.PLAYER_MODEL_MODS;
-    if (mixin.contains(".PlayerArmor")
-        || mixin.contains(".PlayerItem")
-        || mixin.endsWith(".ModelPartCubesAccessor")) return !RenderModSupport.IRIS;
+    // An Iris shader pack is checked at runtime (IrisShaders): it replaces the entity programs
+    // that retained geometry derives its pipelines from.
+    if (mixin.contains(".PlayerBody")) return !RenderModSupport.PLAYER_MODEL_MODS;
     return true;
   }
 

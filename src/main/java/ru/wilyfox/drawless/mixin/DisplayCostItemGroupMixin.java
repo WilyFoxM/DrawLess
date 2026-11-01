@@ -48,7 +48,7 @@ public class DisplayCostItemGroupMixin {
     if (metrics.isEnabled()
         && ru.wilyfox.drawless.config.DrawLessConfig.get().enabled
         && !ru.wilyfox.drawless.compat.RenderModSupport.IMMEDIATELY_FAST
-        && !ru.wilyfox.drawless.compat.RenderModSupport.IRIS) {
+        && !ru.wilyfox.drawless.compat.IrisShaders.packInUse()) {
       try (var ignored = metrics.scope("render/featureBatching/submitDraw")) {
         original.call(type, info);
         metrics.incrementCounter("featureBatching/drawSubmissions", 1);

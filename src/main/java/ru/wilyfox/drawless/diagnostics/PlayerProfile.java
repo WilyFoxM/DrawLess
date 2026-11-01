@@ -446,7 +446,8 @@ public final class PlayerProfile {
         + "; fov="
         + c.options.fov().get()
         + "; resourcePacks="
-        + c.options.resourcePacks;
+        + c.options.resourcePacks
+        + ru.wilyfox.drawless.compat.IrisShaders.environment();
   }
 
   private static final class Session {

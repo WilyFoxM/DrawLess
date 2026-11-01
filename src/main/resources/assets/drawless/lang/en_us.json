@@ -20,7 +20,7 @@
   "drawless.hint.choice": "Left click: next. Right click: previous. Keyboard: left/right arrows.",
   "drawless.hint.number": "Drag the value left/right. Hold Shift for finer adjustment. Keyboard: left/right arrows.",
   "drawless.unavailable.if": "ImmediatelyFast manages this feature. The saved DrawLess preference is preserved.",
-  "drawless.unavailable.iris": "Unavailable with Iris. The saved DrawLess preference is preserved.",
+  "drawless.unavailable.shader_pack": "Unavailable while an Iris shader pack is active. The saved DrawLess preference is preserved.",
   "drawless.page.rendering": "Rendering",
   "drawless.page.particles": "Particles",
   "drawless.page.advanced": "Advanced",

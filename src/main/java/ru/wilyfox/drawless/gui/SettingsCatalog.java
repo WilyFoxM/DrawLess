@@ -8,6 +8,7 @@ import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 import net.minecraft.network.chat.Component;
+import ru.wilyfox.drawless.compat.IrisShaders;
 import ru.wilyfox.drawless.compat.RenderModSupport;
 import ru.wilyfox.drawless.config.DrawLessConfig;
 import ru.wilyfox.drawless.config.ExtremeDisplayMode;
@@ -65,14 +66,14 @@ final class SettingsCatalog {
             Page.PLAYERS,
             () -> c().playerArmorGeometry,
             v -> c().playerArmorGeometry = v,
-            () -> RenderModSupport.IRIS ? reason("iris") : null));
+            () -> IrisShaders.packInUse() ? reason("shader_pack") : null));
     options.add(
         toggle(
             "player_item_geometry",
             Page.PLAYERS,
             () -> c().playerItemGeometry,
             v -> c().playerItemGeometry = v,
-            () -> RenderModSupport.IRIS ? reason("iris") : null));
+            () -> IrisShaders.packInUse() ? reason("shader_pack") : null));
     options.add(
         toggle(
             "player_body_geometry",
@@ -80,9 +81,9 @@ final class SettingsCatalog {
             () -> c().playerBodyGeometry,
             v -> c().playerBodyGeometry = v,
             () ->
-                RenderModSupport.IRIS
-                    ? reason("iris")
-                    : RenderModSupport.PLAYER_MODEL_MODS ? reason("player_model_mods") : null));
+                RenderModSupport.PLAYER_MODEL_MODS
+                    ? reason("player_model_mods")
+                    : IrisShaders.packInUse() ? reason("shader_pack") : null));
     options.add(
         choice(
             "display_mode",
@@ -118,7 +119,7 @@ final class SettingsCatalog {
             () ->
                 RenderModSupport.IMMEDIATELY_FAST
                     ? reason("if")
-                    : RenderModSupport.IRIS ? reason("iris") : null));
+                    : IrisShaders.packInUse() ? reason("shader_pack") : null));
     options.add(
         new Option(
             "text_reuse",

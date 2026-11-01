@@ -25,6 +25,7 @@ import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemDisplayContext;
 import ru.wilyfox.drawless.DrawLess;
+import ru.wilyfox.drawless.compat.IrisShaders;
 import ru.wilyfox.drawless.compat.RenderModSupport;
 import ru.wilyfox.drawless.config.DrawLessConfig;
 import ru.wilyfox.drawless.config.ExtremeDisplayMode;
@@ -168,7 +169,7 @@ public final class LiveDisplayGeometry {
       checked = true;
       blocked = ItemMeshes.prepare(client);
     }
-    enabled = blocked.isEmpty();
+    enabled = blocked.isEmpty() && !IrisShaders.packInUse();
     // Entity-local records must not accumulate across hidden/unloaded actors.
     if ((frame & 63) == 0)
       parts.entrySet().removeIf(e -> e.getKey().isRemoved() || frame - e.getValue().seen > 120);
@@ -409,7 +410,11 @@ public final class LiveDisplayGeometry {
             Locale.ROOT,
             "%s; status=%s; meshes=%d; quadSets=%d; aliases=%d; parts=%d; interpolatingParts=%d; visibleMeshes=%d; visibleVertices=%d; instances=%d; quads=%d; draws=%d; fallback=%d; localBytes=%d; indexBytes=%d; meshBuilds=%d; indexRebuilds=%d; geometryUploads=%d; geometryUploadedBytes=%d; instanceUploadedBytes=%d; animatedSprites=%d; pausedTicksTotal=0; poseReused=%d; poseSubmitted=%d; poseReusedTotal=%d; poseSubmittedTotal=%d; capture=%.3fms; upload=%.3fms; drawCpu=%.3fms; framesTotal=%d; captureTotalMs=%.3f; uploadTotalMs=%.3f; drawTotalMs=%.3f; admission=%s",
             liveMode == null ? DrawLessConfig.get().extremeDisplayMode : liveMode,
-            enabled ? "on" : !DrawLessConfig.get().displayModelBudget ? "layer-cache-off" : blocked,
+            enabled
+                ? "on"
+                : !DrawLessConfig.get().displayModelBudget
+                    ? "layer-cache-off"
+                    : blocked.isEmpty() && IrisShaders.packInUse() ? "shader-pack" : blocked,
             ItemMeshes.meshCount(),
             ItemMeshes.keys(),
             ItemMeshes.aliases(),

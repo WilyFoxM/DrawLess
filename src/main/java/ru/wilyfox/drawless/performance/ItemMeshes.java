@@ -17,7 +17,6 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.resources.Identifier;
 import org.lwjgl.opengl.GL31;
-import ru.wilyfox.drawless.compat.RenderModSupport;
 import ru.wilyfox.drawless.diagnostics.RenderMetrics;
 
 /**
@@ -165,7 +164,6 @@ final class ItemMeshes {
   private static String compatibility(Minecraft client) {
     if (!RenderSystem.getDevice().getDeviceInfo().backendName().equals("OpenGL"))
       return "unsupported-backend";
-    if (RenderModSupport.IRIS) return "iris-vanilla-fallback";
     if (!vanilla(client, "shaders/core/item.vsh", "shaders/core/item.fsh"))
       return "custom-item-shader";
     return "";
