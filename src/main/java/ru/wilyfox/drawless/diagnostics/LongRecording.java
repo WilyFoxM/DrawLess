@@ -3,6 +3,7 @@ package ru.wilyfox.drawless.diagnostics;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.mojang.blaze3d.platform.FramerateLimitTracker;
 import java.lang.management.ManagementFactory;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -199,6 +200,7 @@ public final class LongRecording {
     final List<long[]> slowSpans = new ArrayList<>();
     net.minecraft.client.multiplayer.ClientLevel level;
     long lastFrameAt, lastAllocated, excludedFrames, allocatedBytes, allocatedFrames, slowDropped;
+    long throttledFrames;
     long workFrames, workNanos, slowWithTick, slowWithWork, slowWithAvatarChange;
     int pendingTicks, lastAvatars = -1, worldChanges;
     boolean worldChanged;
@@ -252,6 +254,13 @@ public final class LongRecording {
       if (client.gui.screen() != null || client.isPaused() || !client.getWindow().isFocused()) {
         lastFrameAt = 0;
         excludedFrames++;
+        return;
+      }
+      // An idle player's frames are capped by the game on purpose; they are not hitches.
+      if (client.getFramerateLimitTracker().getThrottleReason()
+          != FramerateLimitTracker.FramerateThrottleReason.NONE) {
+        lastFrameAt = 0;
+        throttledFrames++;
         return;
       }
       long interval = lastFrameAt != 0 ? now - lastFrameAt : 0;
@@ -417,6 +426,7 @@ public final class LongRecording {
       json.addProperty("measured_seconds", total.seconds());
       json.addProperty("mean_fps", total.meanFps());
       json.addProperty("excluded_frames", excludedFrames);
+      json.addProperty("throttled_frames", throttledFrames);
       json.addProperty("world_changes", worldChanges);
       json.add("tail", gson.toJsonTree(total.tail()));
       json.add("tick_frames", gson.toJsonTree(tickFrames.tail()));
@@ -453,7 +463,7 @@ public final class LongRecording {
           .append(startedAt)
           .append(".\n\n");
       out.append(
-          "A passive recording during normal play: no OFF controls, so it says whether slow frames happen and what was in them, not how much faster anything is. Frame intervals are CPU-side wall time between level renders on the render thread. Frames in menus, chat, the pause screen or an unfocused window are excluded. Percentiles have 0.1 ms resolution. GC pauses and cycles are matched to logged frames with one millisecond of tolerance, the JVM's resolution. DrawLess first-time work is its own mesh building, skin admission and mesh compaction; chunk building, networking and other mods are not attributed.\n\n");
+          "A passive recording during normal play: no OFF controls, so it says whether slow frames happen and what was in them, not how much faster anything is. Frame intervals are CPU-side wall time between level renders on the render thread. Frames in menus, chat, the pause screen, an unfocused window or under the game's inactivity frame limit are excluded. Percentiles have 0.1 ms resolution. GC pauses and cycles are matched to logged frames with one millisecond of tolerance, the JVM's resolution. DrawLess first-time work is its own mesh building, skin admission and mesh compaction; chunk building, networking and other mods are not attributed.\n\n");
       out.append("Environment: `").append(environment).append("`\n\n");
       out.append("Hardware: ").append(hardware).append("; Java ");
       out.append(System.getProperty("java.runtime.version")).append("; collectors ");
@@ -461,11 +471,12 @@ public final class LongRecording {
       out.append(
           String.format(
               Locale.ROOT,
-              "Measured %.1f minutes, %d frames, mean %.1f FPS; %d frames excluded; %d world changes.\n\n",
+              "Measured %.1f minutes, %d frames, mean %.1f FPS; excluded %d frames in menus or unfocused and %d under the game's inactivity frame limit; %d world changes.\n\n",
               minutesMeasured,
               total.frames(),
               total.meanFps(),
               excludedFrames,
+              throttledFrames,
               worldChanges));
       out.append(
           "| Median ms | p95 ms | p99 ms | p99.9 ms | Max ms | 1% low FPS |\n| ---: | ---: | ---: | ---: | ---: | ---: |\n");
