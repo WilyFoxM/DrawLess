@@ -103,7 +103,17 @@ public final class ExtremeDisplayPerformance {
   }
 
   static boolean target(Display.ItemDisplay entity) {
-    return entity.level() == world && targets.contains(entity);
+    if (entity.level() != world) return false;
+    return scanned() ? targets.contains(entity) : eligible(entity);
+  }
+
+  /** Only the static cache and the ModelEngine scope need a set; others check in place. */
+  private static boolean scanned() {
+    return !all || mode == ExtremeDisplayMode.STATIC_CACHE;
+  }
+
+  private static boolean eligible(Entity entity) {
+    return !entity.isRemoved() && !(entity.getRootVehicle() instanceof Player);
   }
 
   public static void clear() {
@@ -164,7 +174,7 @@ public final class ExtremeDisplayPerformance {
     Arrays.fill(reasonCounts, 0);
     admissionChecks = 0;
     long tick = world.getGameTime();
-    if (dirty || scanTick != tick) {
+    if (scanned() && (dirty || scanTick != tick)) {
       long start = System.nanoTime();
       try (var ignored = RenderMetrics.getInstance().scope("render/extremeDisplay/membership")) {
         refresh();
@@ -215,8 +225,7 @@ public final class ExtremeDisplayPerformance {
         }
     for (var e : world.entitiesForRendering())
       if (e instanceof Display.ItemDisplay item
-          && !e.isRemoved()
-          && !(e.getRootVehicle() instanceof Player)
+          && eligible(e)
           && (all || enginePart(item) || roots.contains(e.getRootVehicle().getUUID())))
         targets.add(item);
     var iterator = snapshots.entrySet().iterator();
