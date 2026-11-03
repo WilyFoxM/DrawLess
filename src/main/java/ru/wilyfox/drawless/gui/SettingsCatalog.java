@@ -19,8 +19,7 @@ final class SettingsCatalog {
     RENDERING,
     PLAYERS,
     PARTICLES,
-    ADVANCED,
-    DIAGNOSTICS;
+    ADVANCED;
 
     Component title() {
       return Component.translatable("drawless.page." + name().toLowerCase(java.util.Locale.ROOT));
@@ -195,7 +194,7 @@ final class SettingsCatalog {
     options.add(
         toggle(
             "all_displays",
-            Page.DIAGNOSTICS,
+            Page.ADVANCED,
             () -> c().extremeAllItemDisplays,
             v -> c().extremeAllItemDisplays = v));
     return List.copyOf(options);
