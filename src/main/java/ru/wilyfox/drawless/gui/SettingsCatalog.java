@@ -135,6 +135,12 @@ final class SettingsCatalog {
             0));
     options.add(
         toggle(
+            "live_view_culling",
+            Page.RENDERING,
+            () -> c().liveViewCulling,
+            v -> c().liveViewCulling = v));
+    options.add(
+        toggle(
             "model_cache",
             Page.RENDERING,
             () -> c().displayModelBudget,

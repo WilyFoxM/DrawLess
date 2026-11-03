@@ -22,6 +22,8 @@ rendering, and every optimization has its own switch.
 - Live geometry: supported Item Display models, including ModelEngine models built
   from them, keep their meshes on the GPU and draw together; each frame sends
   only poses, lighting and tint.
+- Parts of these models outside the camera view are skipped for the frame; their
+  ticks and animation keep running.
 - A model cache reuses prepared model layers and refreshes them within a CPU budget.
 
 **Players**

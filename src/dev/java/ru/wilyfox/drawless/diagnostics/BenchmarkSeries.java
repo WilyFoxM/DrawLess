@@ -31,6 +31,7 @@ public final class BenchmarkSeries {
     PLAYER_ARMOR,
     PLAYER_ITEMS,
     PLAYER_BODY,
+    LIVE_CULLING,
     BATCHING;
 
     String id() {
@@ -52,6 +53,7 @@ public final class BenchmarkSeries {
         case PLAYER_ARMOR -> c.playerArmorGeometry = on;
         case PLAYER_ITEMS -> c.playerItemGeometry = on;
         case PLAYER_BODY -> c.playerBodyGeometry = on;
+        case LIVE_CULLING -> c.liveViewCulling = on;
         case BATCHING -> c.featureBatching = on;
       }
     }
@@ -61,7 +63,8 @@ public final class BenchmarkSeries {
           || (this == BATCHING
                   || this == PLAYER_ARMOR
                   || this == PLAYER_ITEMS
-                  || this == PLAYER_BODY)
+                  || this == PLAYER_BODY
+                  || this == LIVE_CULLING)
               && ru.wilyfox.drawless.compat.IrisShaders.packInUse()
           || this == PLAYER_BODY && RenderModSupport.PLAYER_MODEL_MODS
           || (this == PARTICLES || this == PARTICLE_LIGHT || this == PARTICLE_COLLISION)

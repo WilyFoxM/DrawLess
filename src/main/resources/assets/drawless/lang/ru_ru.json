@@ -39,6 +39,8 @@
   "drawless.setting.batching.description": "Расширенный режим объединяет больше отрисовок, но может менять наложение слоёв. При артефактах выберите ограниченный режим или выключите функцию.",
   "drawless.setting.text_reuse": "Буферы текста",
   "drawless.setting.text_reuse.description": "Экспериментально. Переиспользует текущий буфер текста и имён в пределах прохода подготовки. По умолчанию выключено.",
+  "drawless.setting.live_view_culling": "Пропускать дисплеи вне экрана",
+  "drawless.setting.live_view_culling.description": "Item Display на видеокарте, которые не попадают в обзор камеры, пропускаются в этом кадре. Тики и анимация продолжают работать. Часть, очень быстро влетающая в кадр, может появиться с небольшой задержкой.",
   "drawless.setting.model_cache": "Кеш моделей Display",
   "drawless.setting.model_cache.description": "Переиспользует слои моделей Item Display и обновляет их в пределах бюджета CPU.",
   "drawless.setting.adaptive_budget": "Адаптивный бюджет",

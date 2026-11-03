@@ -274,12 +274,22 @@ final class ItemMeshes {
       for (var entry : grouped.entrySet()) {
         int offset = buffer.vertices();
         Set<TextureAtlasSprite> sprites = Collections.newSetFromMap(new IdentityHashMap<>());
+        float[] bounds = {
+          Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE,
+          -Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE
+        };
         for (var quad : entry.getValue()) {
           var n = quad.direction().getUnitVec3f();
           if (quad.materialInfo().sprite().isAnimated()) sprites.add(quad.materialInfo().sprite());
           for (int v = 0; v < 4; v++) {
             var p = quad.position(v);
             long uv = quad.packedUV(v);
+            bounds[0] = Math.min(bounds[0], p.x());
+            bounds[1] = Math.min(bounds[1], p.y());
+            bounds[2] = Math.min(bounds[2], p.z());
+            bounds[3] = Math.max(bounds[3], p.x());
+            bounds[4] = Math.max(bounds[4], p.y());
+            bounds[5] = Math.max(bounds[5], p.z());
             buffer.vertex(
                 p.x(), p.y(), p.z(), UVPair.unpackU(uv), n.x(), n.y(), n.z(), UVPair.unpackV(uv));
           }
@@ -291,7 +301,8 @@ final class ItemMeshes {
                 buffer.vertices() - offset,
                 entry.getKey().tint,
                 entry.getKey().emission,
-                List.copyOf(sprites)));
+                List.copyOf(sprites),
+                bounds));
         meshCount++;
         meshBuilds++;
       }
@@ -427,6 +438,9 @@ final class ItemMeshes {
     final int firstVertex, vertexCount, tint, emission;
     final List<TextureAtlasSprite> sprites;
 
+    /** Local bounds: min x, y, z, then max x, y, z. */
+    final float[] bounds;
+
     /**
      * Per-mesh state owned by the Live Item Display consumer; it validates the value against its
      * own generation before use, since consumers clear independently of the store.
@@ -439,18 +453,20 @@ final class ItemMeshes {
         int vertexCount,
         int tint,
         int emission,
-        List<TextureAtlasSprite> sprites) {
+        List<TextureAtlasSprite> sprites,
+        float[] bounds) {
       this.type = type;
       this.firstVertex = firstVertex;
       this.vertexCount = vertexCount;
       this.tint = tint;
       this.emission = emission;
       this.sprites = sprites;
+      this.bounds = bounds;
     }
 
     /** The same material at another place in the buffer, as a new object. */
     Mesh at(int first) {
-      return new Mesh(type, first, vertexCount, tint, emission, sprites);
+      return new Mesh(type, first, vertexCount, tint, emission, sprites, bounds);
     }
 
     @Override
