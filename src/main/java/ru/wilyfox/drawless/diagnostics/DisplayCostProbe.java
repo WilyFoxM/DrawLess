@@ -236,7 +236,7 @@ public final class DisplayCostProbe {
     return out.toString();
   }
 
-  public static final class Cost {
+  public static final class Cost implements ru.wilyfox.drawless.observe.Observer.Sample {
     final String model;
     public long tickNanos, tickCalls, extractNanos, extractCalls, submitNanos, vertexNanos, quads;
     private Map<String, Long> admissions;

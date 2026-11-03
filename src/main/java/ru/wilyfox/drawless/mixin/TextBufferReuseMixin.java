@@ -14,7 +14,7 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import ru.wilyfox.drawless.config.DrawLessConfig;
-import ru.wilyfox.drawless.diagnostics.RenderMetrics;
+import ru.wilyfox.drawless.observe.Observation;
 import ru.wilyfox.drawless.performance.PassLocalBufferReuse;
 
 /** Pass-scoped reuse shared by text and name tags, with active-buffer validation. */
@@ -39,7 +39,7 @@ public abstract class TextBufferReuseMixin {
         (Object) this instanceof TextFeatureRenderer
             || (Object) this instanceof NameTagFeatureRenderer;
     boolean requested = config.enabled && config.textBufferReuse && textRenderer;
-    var metrics = RenderMetrics.getInstance();
+    var metrics = Observation.get();
     boolean profiling = config.enabled && textRenderer && metrics.isEnabled();
     if (!requested && !profiling && !drawless$buffers.active()) {
       original.call(context, submits, ordered);

@@ -78,7 +78,7 @@ public final class RenderMetrics {
     long calls, nanos, max;
   }
 
-  public static final class Scope implements AutoCloseable {
+  public static final class Scope implements ru.wilyfox.drawless.observe.Observer.Scope {
     private final RenderMetrics metrics;
     private final String name;
     private final long started, generation;

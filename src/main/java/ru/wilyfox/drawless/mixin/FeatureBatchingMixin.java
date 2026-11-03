@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import ru.wilyfox.drawless.config.DrawLessConfig;
-import ru.wilyfox.drawless.diagnostics.RenderMetrics;
+import ru.wilyfox.drawless.observe.Observation;
 import ru.wilyfox.drawless.performance.FeatureBatching;
 
 /** Limited mode preserves vanilla order; expanded mode also promotes ordered groups. */
@@ -37,7 +37,7 @@ public abstract class FeatureBatchingMixin {
   private int drawless$findCompatible(
       List<PreparedRenderType> materials, Object requested, Operation<Integer> original) {
     boolean enabled = FeatureBatching.enabled();
-    var metrics = RenderMetrics.getInstance();
+    var metrics = Observation.get();
     boolean profiling = DrawLessConfig.get().enabled && metrics.isEnabled();
     if (!enabled && !profiling) return original.call(materials, requested);
     try (var ignored = metrics.scope("render/featureBatching/search")) {

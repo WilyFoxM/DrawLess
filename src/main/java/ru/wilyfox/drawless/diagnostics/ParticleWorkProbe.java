@@ -1,6 +1,6 @@
-package ru.wilyfox.drawless.performance;
+package ru.wilyfox.drawless.diagnostics;
 
-import ru.wilyfox.drawless.diagnostics.DisplayProbe;
+import ru.wilyfox.drawless.performance.ParticleSpatialContext;
 
 /**
  * Two coarse timestamps per pass only during the explicit short diagnostic; no per-particle timers.

@@ -43,6 +43,8 @@ import ru.wilyfox.drawless.compat.IrisShaders;
 import ru.wilyfox.drawless.compat.RenderModSupport;
 import ru.wilyfox.drawless.config.DrawLessConfig;
 import ru.wilyfox.drawless.mixin.ModelPartCubesAccessor;
+import ru.wilyfox.drawless.observe.Observation;
+import ru.wilyfox.drawless.observe.Observer;
 import ru.wilyfox.drawless.util.ClientDisconnect;
 
 /**
@@ -516,7 +518,7 @@ public final class PlayerArmorGeometry {
     var mesh = uv == null ? meshes.plain : meshes.mapped.get(uv);
     if (mesh != null) return mesh;
     mesh = build(meshes, uv);
-    FrameWork.add(FrameWork.Kind.PART_MESH, System.nanoTime() - start);
+    Observation.get().work(Observer.Work.PART_MESH, System.nanoTime() - start);
     if (mesh == null) return null;
     if (uv == null) meshes.plain = mesh;
     else meshes.mapped.put(uv, mesh);
@@ -831,7 +833,7 @@ public final class PlayerArmorGeometry {
     } catch (IOException | RuntimeException failure) {
       slot = SkinSlot.REFUSED;
     }
-    FrameWork.add(FrameWork.Kind.SKIN, System.nanoTime() - start);
+    Observation.get().work(Observer.Work.SKIN, System.nanoTime() - start);
     if (slot != null && skins.size() < 1024) skins.put(texture, slot);
     // A cell admitted or used this frame must not be evicted by a later body of the same frame.
     if (slot != null && slot.cell >= 0) slot.frame = frame;

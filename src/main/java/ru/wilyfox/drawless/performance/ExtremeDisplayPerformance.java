@@ -28,8 +28,7 @@ import net.minecraft.world.phys.Vec3;
 import org.lwjgl.system.MemoryUtil;
 import ru.wilyfox.drawless.config.DrawLessConfig;
 import ru.wilyfox.drawless.config.ExtremeDisplayMode;
-import ru.wilyfox.drawless.diagnostics.DisplayCostProbe;
-import ru.wilyfox.drawless.diagnostics.RenderMetrics;
+import ru.wilyfox.drawless.observe.Observation;
 import ru.wilyfox.drawless.util.ClientDisconnect;
 
 /** Item Display membership and conservative reuse of opaque geometry with an unchanged pose. */
@@ -176,7 +175,7 @@ public final class ExtremeDisplayPerformance {
     long tick = world.getGameTime();
     if (scanned() && (dirty || scanTick != tick)) {
       long start = System.nanoTime();
-      try (var ignored = RenderMetrics.getInstance().scope("render/extremeDisplay/membership")) {
+      try (var ignored = Observation.get().scope("render/extremeDisplay/membership")) {
         refresh();
         scanTick = tick;
         dirty = false;
@@ -186,7 +185,7 @@ public final class ExtremeDisplayPerformance {
     }
     if (mode == ExtremeDisplayMode.STATIC_CACHE) {
       long validationStart = System.nanoTime();
-      try (var ignored = RenderMetrics.getInstance().scope("render/staticDisplay/validate")) {
+      try (var ignored = Observation.get().scope("render/staticDisplay/validate")) {
         var iterator = snapshots.entrySet().iterator();
         while (iterator.hasNext()) {
           var entry = iterator.next();
@@ -208,7 +207,7 @@ public final class ExtremeDisplayPerformance {
         }
       } finally {
         validationNanos = System.nanoTime() - validationStart;
-        DisplayCostProbe.global("Static validation", validationNanos);
+        Observation.get().global("Static validation", validationNanos);
       }
       // Visibility is resolved by vanilla below, before rebuilding the opaque GPU batches.
     }
@@ -279,7 +278,7 @@ public final class ExtremeDisplayPerformance {
     unstable = unsafe = rejected = 0;
     long start = System.nanoTime();
     int attempts = 0;
-    try (var ignored = RenderMetrics.getInstance().scope("render/staticDisplay/capture")) {
+    try (var ignored = Observation.get().scope("render/staticDisplay/capture")) {
       var iterator =
           extracted.isEmpty()
               ? Collections.<EntityRenderState>emptyIterator()
@@ -337,7 +336,7 @@ public final class ExtremeDisplayPerformance {
       admissionNanosTotal += captureNanos;
       admissionFramesTotal++;
       extracted.clear();
-      DisplayCostProbe.global("Static admission scan", captureNanos);
+      Observation.get().global("Static admission scan", captureNanos);
     }
     // Vanilla can skip an entity before calling isEntityVisible (e.g. unloaded chunk).
     for (var snapshot : snapshots.values())
@@ -355,18 +354,18 @@ public final class ExtremeDisplayPerformance {
     unsafe = reasonCounts[Reason.UNSAFE_MODEL.ordinal()];
     rejected = 0;
     for (var reason : REASONS) if (reason.visual) rejected += reasonCounts[reason.ordinal()];
-    if (DisplayCostProbe.frame()) {
+    if (Observation.get().sampling()) {
       for (var state : frame.entityRenderStates) {
         if (!(state instanceof ItemDisplayEntityRenderState)) continue;
-        var cost = DisplayCostProbe.source(state);
+        var cost = Observation.get().source(state);
         if (cost == null) continue;
-        var entity = DisplayCostProbe.entity(state);
+        var entity = Observation.get().entity(state);
         var admission = admissions.get(entity);
-        if (admission != null) DisplayCostProbe.admission(cost, admission.reason.label);
+        if (admission != null) Observation.get().admission(cost, admission.reason.label);
       }
       for (var entry : snapshots.entrySet())
         if (entry.getValue().visible)
-          DisplayCostProbe.admission(DisplayCostProbe.cost(entry.getKey()), "cached");
+          Observation.get().admission(Observation.get().cost(entry.getKey()), "cached");
     }
   }
 
@@ -529,7 +528,7 @@ public final class ExtremeDisplayPerformance {
 
   private static void rebuildGpu() {
     long start = System.nanoTime();
-    try (var ignored = RenderMetrics.getInstance().scope("render/extremeDisplay/upload")) {
+    try (var ignored = Observation.get().scope("render/extremeDisplay/upload")) {
       var byType = new LinkedHashMap<RenderType, List<Mesh>>();
       Set<TextureAtlasSprite> sprites = Collections.newSetFromMap(new IdentityHashMap<>());
       for (var snapshot : snapshots.values())
@@ -581,7 +580,7 @@ public final class ExtremeDisplayPerformance {
     drawCalls = 0;
     var matrix = RenderSystem.getModelViewStack();
     matrix.pushMatrix();
-    try (var ignored = RenderMetrics.getInstance().scope("render/extremeDisplay/draw")) {
+    try (var ignored = Observation.get().scope("render/extremeDisplay/draw")) {
       // Cached vertices bypass Sodium's ordinary item submission tracking. Keep visible atlas
       // animations active through its public API without rebuilding or re-uploading geometry.
       if (SODIUM) for (var sprite : animatedSprites) SodiumSprites.mark(sprite);
@@ -607,13 +606,13 @@ public final class ExtremeDisplayPerformance {
       matrix.popMatrix();
       drawNanos = System.nanoTime() - start;
     }
-    var profiler = RenderMetrics.getInstance();
+    var profiler = Observation.get();
     if (profiler.isEnabled()) profiler.incrementCounter("extremeDisplay/drawCalls", drawCalls);
   }
 
   public static void endFrame() {
     if (mode == ExtremeDisplayMode.OFF) return;
-    var profiler = RenderMetrics.getInstance();
+    var profiler = Observation.get();
     if (profiler.isEnabled()) {
       profiler.incrementCounter("extremeDisplay/skippedStates", skipped);
       profiler.incrementCounter("extremeDisplay/capturedParts", captured);

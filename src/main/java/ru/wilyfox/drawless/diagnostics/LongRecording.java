@@ -24,7 +24,6 @@ import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.state.level.LevelRenderState;
 import net.minecraft.network.chat.Component;
 import ru.wilyfox.drawless.config.DrawLessConfig;
-import ru.wilyfox.drawless.performance.FrameWork;
 import ru.wilyfox.drawless.util.AtomicFileWriter;
 import ru.wilyfox.drawless.util.ClientDisconnect;
 

@@ -16,7 +16,8 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.resources.Identifier;
 import org.lwjgl.opengl.GL31;
-import ru.wilyfox.drawless.diagnostics.RenderMetrics;
+import ru.wilyfox.drawless.observe.Observation;
+import ru.wilyfox.drawless.observe.Observer;
 import ru.wilyfox.drawless.util.ClientDisconnect;
 
 /**
@@ -95,7 +96,7 @@ final class ItemMeshes {
     now = System.nanoTime();
     if (pressure && now >= nextCompaction) {
       compact();
-      FrameWork.add(FrameWork.Kind.COMPACTION, System.nanoTime() - now);
+      Observation.get().work(Observer.Work.COMPACTION, System.nanoTime() - now);
     }
   }
 
@@ -241,7 +242,7 @@ final class ItemMeshes {
       return Geometry.WARMING;
     long start = System.nanoTime();
     buildsThisFrame++;
-    try (var ignored = RenderMetrics.getInstance().scope("render/liveDisplay/buildGeometry")) {
+    try (var ignored = Observation.get().scope("render/liveDisplay/buildGeometry")) {
       var grouped = new LinkedHashMap<Material, List<BakedQuad>>();
       for (var quad : quads) {
         var info = quad.materialInfo();
@@ -298,7 +299,7 @@ final class ItemMeshes {
     } finally {
       long elapsed = System.nanoTime() - start;
       buildNanos += elapsed;
-      FrameWork.add(FrameWork.Kind.ITEM_MESH, elapsed);
+      Observation.get().work(Observer.Work.ITEM_MESH, elapsed);
     }
   }
 

@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import ru.wilyfox.drawless.config.DrawLessConfig;
 import ru.wilyfox.drawless.diagnostics.*;
 import ru.wilyfox.drawless.gui.SettingsKeyBinding;
+import ru.wilyfox.drawless.observe.Observation;
 import ru.wilyfox.drawless.performance.*;
 
 public final class DrawLess implements ClientModInitializer {
@@ -25,6 +26,7 @@ public final class DrawLess implements ClientModInitializer {
     ExtremeDisplayPerformance.register();
     LiveDisplayGeometry.register();
     ParticleSpatialContext.register();
+    Observation.install(new DiagnosticsObserver());
     DisplayProbe.register();
     ru.wilyfox.drawless.diagnostics.LongRecording.register();
     DisplayCostProbe.register();

@@ -17,8 +17,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import ru.wilyfox.drawless.config.DrawLessConfig;
-import ru.wilyfox.drawless.diagnostics.RenderMetrics;
 import ru.wilyfox.drawless.mixin.*;
+import ru.wilyfox.drawless.observe.Observation;
 import ru.wilyfox.drawless.util.ClientDisconnect;
 
 /**
@@ -81,7 +81,7 @@ public final class DisplayModelBudget {
     var config = DrawLessConfig.get();
     budget.begin(now, config.displayModelBudgetMicros, config.adaptiveDisplayModelBudget);
     reused = rebuilt = deferred = bypassed = mandatory = constructorReused = 0;
-    try (var ignored = RenderMetrics.getInstance().scope("render/displayBudget/refresh")) {
+    try (var ignored = Observation.get().scope("render/displayBudget/refresh")) {
       refreshPending(client, camera, now);
     }
   }
@@ -264,7 +264,7 @@ public final class DisplayModelBudget {
       return false;
     }
     long started = System.nanoTime();
-    try (var ignored = RenderMetrics.getInstance().scope("render/displayBudget/firstModel")) {
+    try (var ignored = Observation.get().scope("render/displayBudget/firstModel")) {
       resolver.updateForNonLiving(output.item, stack, context, entity);
       // First appearance is mandatory: there is no previous image to show without popping.
       entries.put(entity, new Entry(entity, resolver, output.item, stack, context, now));
@@ -365,7 +365,7 @@ public final class DisplayModelBudget {
 
   public static void endFrame() {
     if (!enabled) return;
-    var profiler = RenderMetrics.getInstance();
+    var profiler = Observation.get();
     if (!profiler.isEnabled()) return;
     profiler.incrementCounter("displayBudget/reused", reused);
     profiler.incrementCounter("displayBudget/rebuilt", rebuilt);

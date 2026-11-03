@@ -9,6 +9,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import ru.wilyfox.drawless.compat.RenderModSupport;
 import ru.wilyfox.drawless.config.DrawLessConfig;
+import ru.wilyfox.drawless.observe.Observation;
 import ru.wilyfox.drawless.util.ClientDisconnect;
 
 /**
@@ -42,7 +43,7 @@ public final class ParticleSpatialContext {
 
   static void beginTick(ClientLevel level) {
     if (!clientThread()) return;
-    long start = ParticleWorkProbe.begin();
+    long start = Observation.get().particleStart();
     try {
       var config = DrawLessConfig.get();
       if (config.enabled
@@ -54,7 +55,7 @@ public final class ParticleSpatialContext {
         lightChanged();
       } else clear();
     } finally {
-      ParticleWorkProbe.contextEnd(start);
+      Observation.get().particleContextEnd(start);
     }
   }
 

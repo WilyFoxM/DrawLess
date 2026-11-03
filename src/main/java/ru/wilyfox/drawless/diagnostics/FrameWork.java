@@ -1,6 +1,7 @@
-package ru.wilyfox.drawless.performance;
+package ru.wilyfox.drawless.diagnostics;
 
 import java.util.Locale;
+import ru.wilyfox.drawless.observe.Observer;
 
 /**
  * First-time work the retained owners do inside a frame: mesh builds, skin admission and mesh
@@ -8,26 +9,13 @@ import java.util.Locale;
  * what a slow frame spent on DrawLess's own setup. Outside a session they just accumulate.
  */
 public final class FrameWork {
-  public enum Kind {
-    ITEM_MESH("itemMesh"),
-    PART_MESH("partMesh"),
-    SKIN("skin"),
-    COMPACTION("compaction");
-
-    final String label;
-
-    Kind(String label) {
-      this.label = label;
-    }
-  }
-
-  private static final long[] COUNTS = new long[Kind.values().length];
-  private static final long[] NANOS = new long[Kind.values().length];
+  private static final long[] COUNTS = new long[Observer.Work.values().length];
+  private static final long[] NANOS = new long[Observer.Work.values().length];
   private static long total;
 
   private FrameWork() {}
 
-  public static void add(Kind kind, long nanos) {
+  public static void add(Observer.Work kind, long nanos) {
     COUNTS[kind.ordinal()]++;
     NANOS[kind.ordinal()] += nanos;
     total += nanos;
@@ -41,7 +29,7 @@ public final class FrameWork {
   /** "skin:1 0.312ms, itemMesh:3 0.120ms" since the last drain, then resets; "" when none. */
   public static String drain() {
     var out = new StringBuilder();
-    for (var kind : Kind.values()) {
+    for (var kind : Observer.Work.values()) {
       int i = kind.ordinal();
       if (COUNTS[i] == 0) continue;
       if (!out.isEmpty()) out.append(", ");
