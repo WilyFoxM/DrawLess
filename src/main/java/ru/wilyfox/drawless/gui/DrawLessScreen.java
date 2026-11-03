@@ -16,6 +16,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import ru.wilyfox.drawless.DrawLess;
 import ru.wilyfox.drawless.config.DrawLessConfig;
+import ru.wilyfox.drawless.observe.Observation;
 
 /** Standalone settings: categories, global search and clipped, accessible controls. */
 public final class DrawLessScreen extends Screen {
@@ -42,10 +43,7 @@ public final class DrawLessScreen extends Screen {
 
   public DrawLessScreen(Screen parent) {
     super(Component.literal("DrawLess"));
-    ru.wilyfox.drawless.diagnostics.PlayerProfile.finish(
-        net.minecraft.client.Minecraft.getInstance(), "settings_opened");
-    ru.wilyfox.drawless.diagnostics.BenchmarkSeries.beforeSettings(
-        net.minecraft.client.Minecraft.getInstance());
+    Observation.get().settingsOpened(net.minecraft.client.Minecraft.getInstance());
     this.parent = parent;
   }
 

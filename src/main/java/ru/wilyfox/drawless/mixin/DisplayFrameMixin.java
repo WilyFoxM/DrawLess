@@ -10,22 +10,20 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import ru.wilyfox.drawless.diagnostics.DisplayProbe;
+import ru.wilyfox.drawless.observe.Observation;
 
-/** Read the extracted list before submitEntities consumes and clears it. */
+/** Frame boundaries of entity extraction, before submitEntities consumes the extracted list. */
 @Mixin(LevelExtractor.class)
-public class DisplayProbeMixin {
+public class DisplayFrameMixin {
   @Inject(method = "extractVisibleEntities", at = @At("HEAD"))
   private void drawless$prepareDisplayModels(
       Camera camera, Frustum frustum, DeltaTracker delta, LevelRenderState state, CallbackInfo ci) {
-    ru.wilyfox.drawless.diagnostics.DisplayCostProbe.beginFrame(Minecraft.getInstance());
+    Observation.get().frameBegin(Minecraft.getInstance());
     ru.wilyfox.drawless.performance.ExtremeDisplayPerformance.beginFrame(
         Minecraft.getInstance(), state);
-    long start = ru.wilyfox.drawless.diagnostics.DisplayCostProbe.frame() ? System.nanoTime() : 0;
+    long start = Observation.get().sampling() ? System.nanoTime() : 0;
     ru.wilyfox.drawless.performance.DisplayModelBudget.beginFrame(Minecraft.getInstance(), camera);
-    if (start != 0)
-      ru.wilyfox.drawless.diagnostics.DisplayCostProbe.global(
-          "Layer-cache refresh", System.nanoTime() - start);
+    if (start != 0) Observation.get().global("Layer-cache refresh", System.nanoTime() - start);
     ru.wilyfox.drawless.performance.NpcFrameCache.beginFrame(Minecraft.getInstance());
     ru.wilyfox.drawless.performance.LiveDisplayGeometry.beginFrame(Minecraft.getInstance());
     ru.wilyfox.drawless.performance.DisplayExtractionCache.beginFrame(
@@ -44,8 +42,7 @@ public class DisplayProbeMixin {
     ru.wilyfox.drawless.performance.DisplayModelBudget.endFrame();
     ru.wilyfox.drawless.performance.NpcFrameCache.endFrame();
     ru.wilyfox.drawless.performance.ExtremeDisplayPerformance.endFrame();
-    ru.wilyfox.drawless.diagnostics.DisplayCostProbe.sceneEnd();
-    DisplayProbe.onFrame(Minecraft.getInstance(), camera, frustum, state);
-    ru.wilyfox.drawless.diagnostics.LongRecording.onFrame(Minecraft.getInstance(), state);
+    Observation.get().sceneEnd();
+    Observation.get().frameEnd(Minecraft.getInstance(), camera, frustum, state);
   }
 }

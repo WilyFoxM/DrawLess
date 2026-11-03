@@ -28,8 +28,7 @@ import ru.wilyfox.drawless.compat.IrisShaders;
 import ru.wilyfox.drawless.compat.RenderModSupport;
 import ru.wilyfox.drawless.config.DrawLessConfig;
 import ru.wilyfox.drawless.config.ExtremeDisplayMode;
-import ru.wilyfox.drawless.diagnostics.DisplayCostProbe;
-import ru.wilyfox.drawless.diagnostics.RenderMetrics;
+import ru.wilyfox.drawless.observe.Observation;
 import ru.wilyfox.drawless.util.ClientDisconnect;
 
 /**
@@ -194,15 +193,15 @@ public final class LiveDisplayGeometry {
     entityLoopStarted = 0;
     entityLoopTotal += entityLoopNanos;
     entityLoopFrames++;
-    DisplayCostProbe.global("Vanilla entity extraction loop (capture excluded)", entityLoopNanos);
+    Observation.get().global("Vanilla entity extraction loop (capture excluded)", entityLoopNanos);
   }
 
   public static void finishFrame(Minecraft client, LevelRenderState state) {
     if (!enabled) return;
     long start = System.nanoTime();
-    boolean sample = DisplayCostProbe.frame();
+    boolean sample = Observation.get().sampling();
     long eligibilityNanos = 0, poseNanos = 0, groupNanos = 0;
-    try (var ignored = RenderMetrics.getInstance().scope("render/liveDisplay/capture")) {
+    try (var ignored = Observation.get().scope("render/liveDisplay/capture")) {
       for (var renderState : state.entityRenderStates) {
         var entity = extracted.get(renderState);
         if (entity == null || !(renderState instanceof ItemDisplayEntityRenderState item)) continue;
@@ -277,18 +276,19 @@ public final class LiveDisplayGeometry {
         }
         reasons[reason.ordinal()]++;
         if (reason != Reason.READY) fallbacks++;
-        if (sample) DisplayCostProbe.admission(DisplayCostProbe.source(renderState), reason.label);
+        if (sample)
+          Observation.get().admission(Observation.get().source(renderState), reason.label);
       }
     } catch (RuntimeException failure) {
       fail(failure);
     } finally {
       captureNanos = System.nanoTime() - start;
       captureTotal += captureNanos;
-      DisplayCostProbe.global("Live geometry capture", captureNanos);
+      Observation.get().global("Live geometry capture", captureNanos);
       if (sample) {
-        DisplayCostProbe.global("Live eligibility (capture component)", eligibilityNanos);
-        DisplayCostProbe.global("Live local pose (capture component)", poseNanos);
-        DisplayCostProbe.global("Live positioning/grouping (capture component)", groupNanos);
+        Observation.get().global("Live eligibility (capture component)", eligibilityNanos);
+        Observation.get().global("Live local pose (capture component)", poseNanos);
+        Observation.get().global("Live positioning/grouping (capture component)", groupNanos);
       }
       capture.reset(null);
     }
@@ -297,7 +297,7 @@ public final class LiveDisplayGeometry {
       return;
     }
     start = System.nanoTime();
-    try (var ignored = RenderMetrics.getInstance().scope("render/liveDisplay/upload")) {
+    try (var ignored = Observation.get().scope("render/liveDisplay/upload")) {
       ItemMeshes.upload();
       for (var batch : activeBatches) {
         if (batch.prepare()) indexRebuilds++;
@@ -317,7 +317,7 @@ public final class LiveDisplayGeometry {
       uploadNanos = System.nanoTime() - start;
       uploadTotal += uploadNanos;
       framesTotal++;
-      DisplayCostProbe.global("Live geometry upload", uploadNanos);
+      Observation.get().global("Live geometry upload", uploadNanos);
       extracted.clear();
     }
   }
@@ -371,7 +371,7 @@ public final class LiveDisplayGeometry {
     draws = 0;
     var matrix = com.mojang.blaze3d.systems.RenderSystem.getModelViewStack();
     matrix.pushMatrix();
-    try (var ignored = RenderMetrics.getInstance().scope("render/liveDisplay/draw")) {
+    try (var ignored = Observation.get().scope("render/liveDisplay/draw")) {
       matrix.set(context.levelState().cameraRenderState.viewRotationMatrix);
       if (SODIUM) for (var sprite : animated) SodiumSprites.mark(sprite);
       draws = RetainedPass.draw(LABEL, activeBatches, ItemMeshes.pipelines(), ItemMeshes.buffer());
@@ -381,9 +381,9 @@ public final class LiveDisplayGeometry {
       matrix.popMatrix();
       drawNanos = System.nanoTime() - start;
       drawTotal += drawNanos;
-      DisplayCostProbe.global("Live geometry draw CPU", drawNanos);
+      Observation.get().global("Live geometry draw CPU", drawNanos);
     }
-    var profiler = RenderMetrics.getInstance();
+    var profiler = Observation.get();
     if (profiler.isEnabled()) {
       profiler.incrementCounter("liveDisplay/instances", instances);
       profiler.incrementCounter("liveDisplay/draws", draws);

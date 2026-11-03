@@ -12,6 +12,7 @@ import net.minecraft.world.entity.Display;
 import ru.wilyfox.drawless.bridge.DisplayLayerOwnership;
 import ru.wilyfox.drawless.config.DrawLessConfig;
 import ru.wilyfox.drawless.config.ExtremeDisplayMode;
+import ru.wilyfox.drawless.observe.Observation;
 
 /** Recycle only states removed from vanilla submission after a successful GPU-cache commit. */
 public final class DisplayExtractionCache {
@@ -120,7 +121,7 @@ public final class DisplayExtractionCache {
       if (slot != null && !slot.available) slots.remove(entity);
     }
     leases.clear();
-    var profiler = ru.wilyfox.drawless.diagnostics.RenderMetrics.getInstance();
+    var profiler = Observation.get();
     if (profiler.isEnabled()) {
       profiler.incrementCounter("displayExtraction/reusedStates", reused);
       profiler.incrementCounter("displayExtraction/freshStates", fresh);

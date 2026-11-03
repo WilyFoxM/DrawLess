@@ -6,7 +6,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.particle.SingleQuadParticle;
 import net.minecraft.client.renderer.state.level.QuadParticleRenderState;
 import org.spongepowered.asm.mixin.Mixin;
-import ru.wilyfox.drawless.performance.ParticleWorkProbe;
+import ru.wilyfox.drawless.diagnostics.ParticleWorkProbe;
 
 @Mixin(QuadParticleRenderState.class)
 public abstract class ParticleVertexCostMixin {

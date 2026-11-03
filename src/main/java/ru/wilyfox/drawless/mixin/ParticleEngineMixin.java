@@ -9,25 +9,25 @@ import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.state.level.ParticlesRenderState;
 import org.spongepowered.asm.mixin.Mixin;
 import ru.wilyfox.drawless.config.DrawLessConfig;
-import ru.wilyfox.drawless.diagnostics.RenderMetrics;
+import ru.wilyfox.drawless.observe.Observation;
 import ru.wilyfox.drawless.performance.*;
 
 @Mixin(ParticleEngine.class)
 public abstract class ParticleEngineMixin {
   @WrapMethod(method = "tick")
   private void drawless$tick(Operation<Void> original) {
-    long start = ParticleWorkProbe.begin();
+    long start = Observation.get().particleStart();
     var config = DrawLessConfig.get();
     ParticleCollisionCache.beginTick(
         config.enabled
             && config.particleEmptyCollision
             && ru.wilyfox.drawless.compat.RenderModSupport.PARTICLE_CACHES,
         Minecraft.getInstance().level);
-    try (var ignored = RenderMetrics.getInstance().scope("render/particles/tick")) {
+    try (var ignored = Observation.get().scope("render/particles/tick")) {
       original.call();
     } finally {
       ParticleCollisionCache.endTick();
-      ParticleWorkProbe.tickEnd(start);
+      Observation.get().particleTickEnd(start);
     }
   }
 
@@ -38,18 +38,18 @@ public abstract class ParticleEngineMixin {
       Camera camera,
       float tick,
       Operation<Void> original) {
-    long start = ParticleWorkProbe.frameBegin();
+    long start = Observation.get().particleFrameStart();
     var config = DrawLessConfig.get();
     ParticleLightCache.beginFrame(
         config.enabled
             && config.particleLightCache
             && ru.wilyfox.drawless.compat.RenderModSupport.PARTICLE_CACHES,
         Minecraft.getInstance().level);
-    try (var ignored = RenderMetrics.getInstance().scope("render/particles/frame")) {
+    try (var ignored = Observation.get().scope("render/particles/frame")) {
       original.call(state, frustum, camera, tick);
     } finally {
       ParticleLightCache.endFrame();
-      ParticleWorkProbe.frameEnd(start);
+      Observation.get().particleFrameEnd(start);
     }
   }
 }

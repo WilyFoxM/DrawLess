@@ -35,7 +35,7 @@
     "FeatureBatchingMixin",
     "TextBufferReuseMixin",
     "StagedBufferReuseAccessor",
-    "DisplayProbeMixin",
+    "DisplayFrameMixin",
     "DisplayProbeViewAreaAccessor",
     "DisplayCostTickMixin",
     "DisplayCostSubmitMixin",

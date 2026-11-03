@@ -12,7 +12,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Items;
 import ru.wilyfox.drawless.config.DrawLessConfig;
-import ru.wilyfox.drawless.diagnostics.RenderMetrics;
+import ru.wilyfox.drawless.observe.Observation;
 import ru.wilyfox.drawless.util.ClientDisconnect;
 
 /**
@@ -76,7 +76,7 @@ public final class NpcFrameCache {
         DrawLessConfig.get().adaptiveNpcBudget
             ? Math.max(1, (int) Math.floor(configured * Math.min(1, (1e9 / interval) / 60)))
             : configured;
-    try (var ignored = RenderMetrics.getInstance().scope("render/npcBudget/select")) {
+    try (var ignored = Observation.get().scope("render/npcBudget/select")) {
       engineRoots.clear();
       active.clear();
       for (var entity : world.entitiesForRendering())
@@ -159,7 +159,7 @@ public final class NpcFrameCache {
       return;
     var part = parts.get(item);
     if (part == null || part.seen != frame || part.cached == state) return;
-    try (var ignored = RenderMetrics.getInstance().scope("render/npcBudget/freeze")) {
+    try (var ignored = Observation.get().scope("render/npcBudget/freeze")) {
       if (state
               instanceof
               net.minecraft.client.renderer.entity.state.ItemDisplayEntityRenderState pose
@@ -185,7 +185,7 @@ public final class NpcFrameCache {
 
   public static void endFrame() {
     if (!enabled) return;
-    var p = RenderMetrics.getInstance();
+    var p = Observation.get();
     if (!p.isEnabled()) return;
     p.incrementCounter("npcBudget/reusedParts", reused);
     p.incrementCounter("npcBudget/updatedParts", updated);

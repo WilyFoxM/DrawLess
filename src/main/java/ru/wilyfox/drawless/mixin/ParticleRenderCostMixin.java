@@ -6,7 +6,7 @@ import java.util.List;
 import net.minecraft.client.renderer.feature.FeatureFrameContext;
 import net.minecraft.client.renderer.feature.QuadParticleFeatureRenderer;
 import org.spongepowered.asm.mixin.Mixin;
-import ru.wilyfox.drawless.performance.ParticleWorkProbe;
+import ru.wilyfox.drawless.diagnostics.ParticleWorkProbe;
 
 @Mixin(QuadParticleFeatureRenderer.class)
 public abstract class ParticleRenderCostMixin {

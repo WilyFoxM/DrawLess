@@ -213,7 +213,7 @@ public final class DisplayProbe {
                 ru.wilyfox.drawless.performance.NpcFrameCache.groupDiagnostic(),
                 ru.wilyfox.drawless.performance.ParticleLightCache.diagnostic(),
                 ru.wilyfox.drawless.performance.ParticleCollisionCache.diagnostic(),
-                ru.wilyfox.drawless.performance.ParticleWorkProbe.diagnostic(),
+                ParticleWorkProbe.diagnostic(),
                 client.particleEngine.countParticles(),
                 ru.wilyfox.drawless.performance.PlayerArmorGeometry.diagnostic(),
                 ru.wilyfox.drawless.performance.PlayerItemGeometry.diagnostic(),

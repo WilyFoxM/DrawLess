@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Queue;
-import ru.wilyfox.drawless.performance.FrameWork;
 
 /**
  * Every measured frame of one probe phase: its interval, render-thread allocation, rendered avatars

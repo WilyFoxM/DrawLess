@@ -9,6 +9,7 @@ import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.world.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import ru.wilyfox.drawless.observe.Observation;
 import ru.wilyfox.drawless.performance.NpcFrameCache;
 
 @Mixin(EntityRenderDispatcher.class)
@@ -26,12 +27,9 @@ public class NpcFrameCacheMixin {
       float partialTick,
       Operation<EntityRenderState> original) {
     boolean item = renderer instanceof DisplayRenderer.ItemDisplayRenderer;
-    var cost =
-        item && ru.wilyfox.drawless.diagnostics.DisplayCostProbe.frame()
-            ? ru.wilyfox.drawless.diagnostics.DisplayCostProbe.cost(entity)
-            : null;
+    var cost = item && Observation.get().sampling() ? Observation.get().cost(entity) : null;
     long start = cost == null ? 0 : System.nanoTime();
-    var profiler = ru.wilyfox.drawless.diagnostics.RenderMetrics.getInstance();
+    var profiler = Observation.get();
     var scope = item && profiler.isEnabled() ? profiler.scope("render/displayExtraction") : null;
     EntityRenderState result = null;
     try {
@@ -53,9 +51,8 @@ public class NpcFrameCacheMixin {
         ru.wilyfox.drawless.performance.LiveDisplayGeometry.recordState(entity, result);
       if (cost != null && result != null) {
         long nanos = System.nanoTime() - start;
-        ru.wilyfox.drawless.diagnostics.DisplayCostProbe.extracted(entity, result, cost, nanos);
-        ru.wilyfox.drawless.diagnostics.DisplayCostProbe.global(
-            "Item Display extraction (capture excluded)", nanos);
+        Observation.get().extracted(entity, result, cost, nanos);
+        Observation.get().global("Item Display extraction (capture excluded)", nanos);
       }
       if (scope != null) scope.close();
     }
