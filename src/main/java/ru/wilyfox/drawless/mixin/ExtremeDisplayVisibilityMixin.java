@@ -8,6 +8,7 @@ import net.minecraft.world.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import ru.wilyfox.drawless.performance.ExtremeDisplayPerformance;
+import ru.wilyfox.drawless.performance.LiveDisplayGeometry;
 
 @Mixin(LevelExtractor.class)
 public class ExtremeDisplayVisibilityMixin {
@@ -27,8 +28,8 @@ public class ExtremeDisplayVisibilityMixin {
       double z,
       Operation<Boolean> original) {
     boolean visible = original.call(extractor, entity, frustum, x, y, z);
-    return ExtremeDisplayPerformance.staticCache()
-        ? ExtremeDisplayPerformance.staticVisibility(entity, visible)
-        : visible;
+    if (ExtremeDisplayPerformance.staticCache())
+      return ExtremeDisplayPerformance.staticVisibility(entity, visible);
+    return visible && !LiveDisplayGeometry.outsideView(entity, frustum);
   }
 }

@@ -11,6 +11,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.SubmitNodeStorage;
+import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.DisplayRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.entity.state.ItemDisplayEntityRenderState;
@@ -23,6 +24,7 @@ import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.phys.AABB;
 import ru.wilyfox.drawless.DrawLess;
 import ru.wilyfox.drawless.compat.IrisShaders;
 import ru.wilyfox.drawless.compat.RenderModSupport;
@@ -68,6 +70,10 @@ public final class LiveDisplayGeometry {
   private static int visibleMeshCount;
   private static long poseReused, poseSubmitted, poseReusedTotal, poseSubmittedTotal;
   private static long entityLoopStarted, entityLoopNanos, entityLoopTotal, entityLoopFrames;
+  private static final long MOVING_REFRESH = 50_000_000L, STABLE_REFRESH = 1_000_000_000L;
+  private static final double MOVING_MARGIN = 1, STABLE_MARGIN = 0.5;
+  private static int culled;
+  private static long culledTotal;
 
   private LiveDisplayGeometry() {}
 
@@ -118,6 +124,8 @@ public final class LiveDisplayGeometry {
     visibleMeshCount = 0;
     poseReused = poseSubmitted = poseReusedTotal = poseSubmittedTotal = 0;
     entityLoopStarted = entityLoopNanos = entityLoopTotal = entityLoopFrames = 0;
+    culled = 0;
+    culledTotal = 0;
     pose = new PoseStack();
   }
 
@@ -159,7 +167,7 @@ public final class LiveDisplayGeometry {
       for (var batch : type.chunks) batch.used = 0;
     }
     Arrays.fill(reasons, 0);
-    instances = quads = fallbacks = indexBytes = captureNanos = uploadNanos = 0;
+    instances = quads = fallbacks = indexBytes = captureNanos = uploadNanos = culled = 0;
     frame++;
     frameNow = System.nanoTime();
     enabled = false;
@@ -172,6 +180,41 @@ public final class LiveDisplayGeometry {
     // Entity-local records must not accumulate across hidden/unloaded actors.
     if ((frame & 63) == 0)
       parts.entrySet().removeIf(e -> e.getKey().isRemoved() || frame - e.getValue().seen > 120);
+  }
+
+  /**
+   * True when a part's last pose lies outside this frame's view, so nothing of it is needed now.
+   * Only parts already on the GPU qualify; a changed display, or bounds not refreshed for a while,
+   * take the ordinary path. Ticks and animation are not affected.
+   */
+  public static boolean outsideView(Entity entity, Frustum frustum) {
+    if (!enabled
+        || !DrawLessConfig.get().liveViewCulling
+        || !(entity instanceof Display.ItemDisplay item)) return false;
+    var part = parts.get(item);
+    if (part == null
+        || part.reason != Reason.READY
+        || part.used == 0
+        || part.render != item.renderState()
+        || frameNow - part.boundsChecked > (part.moving ? MOVING_REFRESH : STABLE_REFRESH))
+      return false;
+    double margin = part.moving ? MOVING_MARGIN : STABLE_MARGIN;
+    double x = item.getX(), y = item.getY(), z = item.getZ();
+    double mx = margin + Math.abs(x - item.xo);
+    double my = margin + Math.abs(y - item.yo);
+    double mz = margin + Math.abs(z - item.zo);
+    if (frustum.isVisible(
+        new AABB(
+            x + part.minX - mx,
+            y + part.minY - my,
+            z + part.minZ - mz,
+            x + part.maxX + mx,
+            y + part.maxY + my,
+            z + part.maxZ + mz))) return false;
+    part.seen = frame;
+    culled++;
+    culledTotal++;
+    return true;
   }
 
   public static void recordState(Entity entity, EntityRenderState state) {
@@ -218,6 +261,7 @@ public final class LiveDisplayGeometry {
           else {
             stage = sample ? System.nanoTime() : 0;
             part.seen = frame;
+            part.boundsChecked = frameNow;
             if (part.matches(item)) {
               reason = part.reason;
               poseReused++;
@@ -408,7 +452,7 @@ public final class LiveDisplayGeometry {
       if (reasons[r.ordinal()] > 0) reasonsText.add(r.label + ":" + reasons[r.ordinal()]);
     return String.format(
             Locale.ROOT,
-            "%s; status=%s; meshes=%d; quadSets=%d; aliases=%d; parts=%d; interpolatingParts=%d; visibleMeshes=%d; visibleVertices=%d; instances=%d; quads=%d; draws=%d; fallback=%d; localBytes=%d; indexBytes=%d; meshBuilds=%d; indexRebuilds=%d; geometryUploads=%d; geometryUploadedBytes=%d; instanceUploadedBytes=%d; animatedSprites=%d; poseReused=%d; poseSubmitted=%d; poseReusedTotal=%d; poseSubmittedTotal=%d; capture=%.3fms; upload=%.3fms; drawCpu=%.3fms; framesTotal=%d; captureTotalMs=%.3f; uploadTotalMs=%.3f; drawTotalMs=%.3f; admission=%s",
+            "%s; status=%s; meshes=%d; quadSets=%d; aliases=%d; parts=%d; interpolatingParts=%d; visibleMeshes=%d; visibleVertices=%d; instances=%d; culled=%d; culledTotal=%d; quads=%d; draws=%d; fallback=%d; localBytes=%d; indexBytes=%d; meshBuilds=%d; indexRebuilds=%d; geometryUploads=%d; geometryUploadedBytes=%d; instanceUploadedBytes=%d; animatedSprites=%d; poseReused=%d; poseSubmitted=%d; poseReusedTotal=%d; poseSubmittedTotal=%d; capture=%.3fms; upload=%.3fms; drawCpu=%.3fms; framesTotal=%d; captureTotalMs=%.3f; uploadTotalMs=%.3f; drawTotalMs=%.3f; admission=%s",
             liveMode == null ? DrawLessConfig.get().extremeDisplayMode : liveMode,
             enabled
                 ? "on"
@@ -423,6 +467,8 @@ public final class LiveDisplayGeometry {
             visibleMeshCount,
             visibleVertices,
             instances,
+            culled,
+            culledTotal,
             quads,
             draws,
             fallbacks,
@@ -498,6 +544,13 @@ public final class LiveDisplayGeometry {
     final ArrayList<Instance> instances = new ArrayList<>();
     int used, seen;
     long indexBytes;
+
+    /** Bounds around the entity origin at the last pose, and when they were last confirmed. */
+    float minX, minY, minZ, maxX, maxY, maxZ;
+
+    long boundsChecked;
+    boolean moving;
+
     ItemStackRenderState layers;
     Display.RenderState render;
     float interpolation, yRot, xRot, cameraXRot, cameraYRot;
@@ -535,9 +588,48 @@ public final class LiveDisplayGeometry {
       this.reason = reason;
       this.replayable = replayable;
       indexBytes = 0;
-      if (reason == Reason.READY)
+      if (reason == Reason.READY) {
         for (int i = 0; i < used; i++)
           indexBytes += (long) instances.get(i).item.vertexCount / 4 * 6 * 4;
+        measure(state);
+      }
+    }
+
+    private void measure(ItemDisplayEntityRenderState state) {
+      moving = state.interpolationProgress < 1;
+      minX = minY = minZ = Float.MAX_VALUE;
+      maxX = maxY = maxZ = -Float.MAX_VALUE;
+      for (int i = 0; i < used; i++) {
+        var instance = instances.get(i);
+        var bounds = instance.item.bounds;
+        var m = instance.transform;
+        for (int corner = 0; corner < 8; corner++) {
+          float cx = bounds[(corner & 1) == 0 ? 0 : 3];
+          float cy = bounds[(corner & 2) == 0 ? 1 : 4];
+          float cz = bounds[(corner & 4) == 0 ? 2 : 5];
+          float x = m.m00() * cx + m.m10() * cy + m.m20() * cz + instance.localX;
+          float y = m.m01() * cx + m.m11() * cy + m.m21() * cz + instance.localY;
+          float z = m.m02() * cx + m.m12() * cy + m.m22() * cz + instance.localZ;
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          minZ = Math.min(minZ, z);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+          maxZ = Math.max(maxZ, z);
+        }
+      }
+      // A billboard turns with the camera, which may move while the part is culled.
+      if (state.renderState.billboardConstraints() != Display.BillboardConstraints.FIXED) {
+        float radius =
+            Math.max(
+                Math.max(Math.abs(minX), Math.abs(maxX)),
+                Math.max(
+                    Math.max(Math.abs(minY), Math.abs(maxY)),
+                    Math.max(Math.abs(minZ), Math.abs(maxZ))));
+        radius *= (float) Math.sqrt(3);
+        minX = minY = minZ = -radius;
+        maxX = maxY = maxZ = radius;
+      }
     }
   }
 

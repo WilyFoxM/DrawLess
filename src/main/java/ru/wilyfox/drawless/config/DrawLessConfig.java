@@ -26,6 +26,7 @@ public final class DrawLessConfig {
   public boolean adaptiveDisplayModelBudget = true;
   public ExtremeDisplayMode extremeDisplayMode = ExtremeDisplayMode.LIVE_CACHE;
   public boolean extremeAllItemDisplays = true;
+  public boolean liveViewCulling = true;
   public boolean modelEngineNpcBudget = false;
   public int npcGroupsPerFrame = 2;
   public boolean adaptiveNpcBudget = true;
