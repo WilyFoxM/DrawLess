@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "drawless-dev",
+  "version": "${version}",
+  "name": "DrawLess Dev",
+  "description": "Diagnostics, profiles and benchmark reports for DrawLess. Not needed to play.",
+  "authors": [
+    "WilyFox"
+  ],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "ru.wilyfox.drawless.dev.DrawLessDev"
+    ]
+  },
+  "mixins": [
+    "drawless-dev.mixins.json"
+  ],
+  "depends": {
+    "drawless": "${version}"
+  }
+}

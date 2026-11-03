@@ -40,6 +40,34 @@ processResources {
     }
 }
 
+// Diagnostics live in a separate add-on mod, outside the release jar.
+sourceSets {
+    dev {
+        compileClasspath += main.output + main.compileClasspath
+        runtimeClasspath += main.output + main.runtimeClasspath
+    }
+}
+
+processDevResources {
+    inputs.property "version", project.version
+
+    filesMatching("fabric.mod.json") {
+        expand "version": inputs.properties.version
+    }
+}
+
+tasks.register('devJar', Jar) {
+    archiveBaseName = "${project.archives_base_name}-dev"
+    from sourceSets.dev.output
+    from("LICENSE") {
+        rename { "${it}_${archiveBaseName.get()}" }
+    }
+}
+
+tasks.named('assemble') {
+    dependsOn tasks.named('devJar')
+}
+
 tasks.withType(JavaCompile).configureEach {
     it.options.release = 25
     it.options.encoding = 'UTF-8'
@@ -87,6 +115,28 @@ fabricApi.configureTests {
     enableGameTests = false
     enableClientGameTests = true
     eula = true
+}
+
+sourceSets {
+    gametest {
+        compileClasspath += dev.output
+        runtimeClasspath += dev.output
+    }
+    test {
+        compileClasspath += dev.output
+        runtimeClasspath += dev.output
+    }
+}
+
+loom {
+    mods {
+        drawless {
+            sourceSet sourceSets.main
+        }
+        "drawless-dev" {
+            sourceSet sourceSets.dev
+        }
+    }
 }
 
 apply from: 'gradle/quality.gradle'

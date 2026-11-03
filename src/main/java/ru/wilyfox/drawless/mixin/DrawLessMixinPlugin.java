@@ -19,8 +19,6 @@ public final class DrawLessMixinPlugin implements IMixinConfigPlugin {
     if (mixin.endsWith(".TextBufferReuseMixin") || mixin.endsWith(".StagedBufferReuseAccessor")) {
       return !RenderModSupport.IMMEDIATELY_FAST;
     }
-    // Sodium replaces the vanilla section graph that this diagnostic reads.
-    if (mixin.endsWith(".DisplayProbeViewAreaAccessor")) return !RenderModSupport.SODIUM;
     // An Iris shader pack is checked at runtime (IrisShaders): it replaces the entity programs
     // that retained geometry derives its pipelines from.
     if (mixin.contains(".PlayerBody")) return !RenderModSupport.PLAYER_MODEL_MODS;
