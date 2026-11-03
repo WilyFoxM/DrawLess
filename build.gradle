@@ -1,3 +1,5 @@
+import net.fabricmc.loom.task.prod.ClientProductionRunTask
+
 plugins {
     id 'net.fabricmc.fabric-loom' version "${loom_version}"
     id 'maven-publish'
@@ -137,6 +139,40 @@ loom {
             sourceSet sourceSets.dev
         }
     }
+}
+
+// Starts the release JAR alone from a real mods folder; requires local fixtures.
+sourceSets {
+    releaseSmoke {
+        compileClasspath += main.output + main.compileClasspath
+    }
+}
+
+configurations {
+    releaseSmokeMods {
+        transitive = false
+    }
+}
+
+dependencies {
+    releaseSmokeMods "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    releaseSmokeMods fabricApi.module("fabric-client-gametest-api-v1", project.fabric_api_version)
+    if (project.hasProperty("withSodium")) releaseSmokeMods "maven.modrinth:sodium:mc26.2-0.9.2-fabric"
+    if (project.hasProperty("withImmediatelyFast")) releaseSmokeMods "maven.modrinth:immediatelyfast:1.16.5+26.2-fabric"
+}
+
+def releaseSmokeJar = tasks.register('releaseSmokeJar', Jar) {
+    archiveBaseName = 'drawless-release-smoke'
+    destinationDirectory = layout.buildDirectory.dir('release-smoke')
+    from sourceSets.releaseSmoke.output
+}
+
+tasks.register('runReleaseSmoke', ClientProductionRunTask) {
+    group = 'verification'
+    onlyIf('local fixtures are available') { !sourceSets.releaseSmoke.allJava.empty }
+    mods.from(tasks.named('jar'), releaseSmokeJar, configurations.releaseSmokeMods)
+    jvmArgs.add('-Dfabric.client.gametest')
+    runDir = layout.buildDirectory.dir('run/releaseSmoke')
 }
 
 apply from: 'gradle/quality.gradle'

@@ -22,6 +22,7 @@ node_modules/
 !/src/test/java/ru/wilyfox/drawless/performance/LiveGeometryEncodingTest.java
 !/src/test/java/ru/wilyfox/drawless/performance/PassLocalBufferReuseTest.java
 /src/gametest/
+/src/releaseSmoke/
 /src/integrationTest/
 /src/testFixtures/
 /tests/
