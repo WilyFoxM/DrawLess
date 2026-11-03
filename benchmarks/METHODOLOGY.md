@@ -5,13 +5,24 @@
 State the scene, artifact version/SHA-256, hardware, Java, driver, graphics settings,
 resource packs, mod versions and the exact change between phases. Master OFF versus
 default ON measures the default DrawLess optimization set; it does not isolate Live
-geometry. Master OFF retains diagnostic hooks. Testing without the mod is a separate
-installation-overhead control.
+geometry. Testing without the mod is a separate installation-overhead control.
 
-Release performance claims must use the public release JAR. A development-build
+Release performance claims must use the public release JAR, with the `drawless-dev`
+add-on of the same version where the report needs it. A development-build
 measurement may be presented separately with its exact version, source revision,
 artifact SHA-256 and selected preset. It must not be relabelled as a result for
 the final release or its defaults. Synthetic correctness runs are separate evidence.
+
+## Measurement build
+
+The probe, automatic series, profiles and reports live in the `drawless-dev` add-on,
+installed next to the DrawLess JAR of exactly the same version. DrawLess itself has
+no commands or reports, and playing does not need the add-on. It is attached to the
+GitHub release, starting with the first release after 1.4.0, and is not on Modrinth.
+
+The add-on's diagnostic hooks are present during both master OFF and ON, but they are
+not part of what players install. Up to 1.4.0 these hooks were inside the DrawLess JAR,
+so Benchmarks 01 to 04 were measured with them built in.
 
 ## Runs
 
