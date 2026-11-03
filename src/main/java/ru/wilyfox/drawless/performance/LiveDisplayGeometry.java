@@ -6,7 +6,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.*;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Minecraft;
@@ -31,6 +30,7 @@ import ru.wilyfox.drawless.config.DrawLessConfig;
 import ru.wilyfox.drawless.config.ExtremeDisplayMode;
 import ru.wilyfox.drawless.diagnostics.DisplayCostProbe;
 import ru.wilyfox.drawless.diagnostics.RenderMetrics;
+import ru.wilyfox.drawless.util.ClientDisconnect;
 
 /**
  * Experimental indexed vertex pulling. Local meshes are shared ({@link ItemMeshes}); only current
@@ -81,7 +81,7 @@ public final class LiveDisplayGeometry {
           parts.remove(entity);
           DisplayExtractionCache.unload(entity);
         });
-    ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> clear());
+    ClientDisconnect.subscribe(client -> clear());
     ClientLifecycleEvents.CLIENT_STOPPING.register(client -> clear());
     LevelRenderEvents.AFTER_SOLID_FEATURES.register(LiveDisplayGeometry::draw);
   }

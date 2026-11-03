@@ -7,7 +7,6 @@ import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.*;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.builders.UVPair;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -18,6 +17,7 @@ import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.resources.Identifier;
 import org.lwjgl.opengl.GL31;
 import ru.wilyfox.drawless.diagnostics.RenderMetrics;
+import ru.wilyfox.drawless.util.ClientDisconnect;
 
 /**
  * Shared owner of retained local item meshes.
@@ -68,7 +68,7 @@ final class ItemMeshes {
   static void register() {
     if (registered) return;
     registered = true;
-    ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> clear());
+    ClientDisconnect.subscribe(client -> clear());
     ClientLifecycleEvents.CLIENT_STOPPING.register(client -> clear());
   }
 

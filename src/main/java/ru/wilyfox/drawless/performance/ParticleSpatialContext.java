@@ -2,7 +2,6 @@ package ru.wilyfox.drawless.performance;
 
 import java.util.Arrays;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockGetter;
@@ -10,6 +9,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import ru.wilyfox.drawless.compat.RenderModSupport;
 import ru.wilyfox.drawless.config.DrawLessConfig;
+import ru.wilyfox.drawless.util.ClientDisconnect;
 
 /**
  * Shared particle world/lifecycle ownership. Bounded chunk and block facts serve collision scans;
@@ -37,7 +37,7 @@ public final class ParticleSpatialContext {
   public static void register() {
     owner = Thread.currentThread();
     ClientTickEvents.START_CLIENT_TICK.register(client -> beginTick(client.level));
-    ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> clear());
+    ClientDisconnect.subscribe(client -> clear());
   }
 
   static void beginTick(ClientLevel level) {
