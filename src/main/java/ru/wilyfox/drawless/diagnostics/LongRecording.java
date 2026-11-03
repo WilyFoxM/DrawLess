@@ -36,12 +36,14 @@ import ru.wilyfox.drawless.util.AtomicFileWriter;
 public final class LongRecording {
   private static final long MINUTE = 60_000_000_000L;
   private static final long LIMIT = 60 * MINUTE;
+  private static final long NO_LEVEL_LIMIT = 30_000_000_000L;
   private static final int MAX_SLOW = 5000;
   private static final int REPORT_SLOWEST = 50;
   private static final DateTimeFormatter FILE_TIME =
       DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS").withZone(ZoneId.systemDefault());
   private static Run active;
   private static volatile boolean saving;
+  private static volatile boolean disconnected;
   private static volatile Path lastSaved;
 
   private LongRecording() {}
@@ -78,14 +80,16 @@ public final class LongRecording {
           Run run = active;
           if (run == null) return;
           run.pendingTicks++;
-          if (client.level == null) finish(client, "disconnect", false);
-          else if (System.nanoTime() - run.started >= LIMIT) finish(client, "time_limit", false);
+          long now = System.nanoTime();
+          // A network switching servers clears the level for a moment; only a long absence ends it.
+          if (client.level != null) run.levelSeenAt = now;
+          if (disconnected || now - run.levelSeenAt >= NO_LEVEL_LIMIT)
+            finish(client, "disconnect", false);
+          else if (now - run.started >= LIMIT) finish(client, "time_limit", false);
         });
-    // Leaving a world drops queued client tasks, so saving cannot wait in that queue.
-    ClientPlayConnectionEvents.DISCONNECT.register(
-        (handler, client) -> {
-          if (client.isSameThread()) finish(client, "disconnect", false);
-        });
+    // Fired from the network thread too, and leaving a world drops queued client tasks: the next
+    // client tick saves. A server switch in a network does not disconnect, so it records on.
+    ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> disconnected = true);
     ClientLifecycleEvents.CLIENT_STOPPING.register(client -> finish(client, "game_closing", true));
   }
 
@@ -104,6 +108,7 @@ public final class LongRecording {
       return Component.translatable("drawless.benchmark.enter_world");
     if (!label.matches("[A-Za-z0-9_-]{1,24}") || label.equals("stop") || label.equals("status"))
       return Component.translatable("drawless.benchmark.invalid_label");
+    disconnected = false;
     active = new Run(client, label);
     return Component.translatable("drawless.record.started", label, LIMIT / MINUTE);
   }
@@ -138,7 +143,7 @@ public final class LongRecording {
     active = null;
     saving = true;
     GcEvents.unsubscribe(run.gc);
-    run.closeMinute(client);
+    run.closeMinute();
     String json = run.json(reason);
     String markdown = run.markdown(reason);
     Path directory =
@@ -198,7 +203,9 @@ public final class LongRecording {
     int pendingTicks, lastAvatars = -1, worldChanges;
     boolean worldChanged;
     double logThresholdMs = 1000.0 / 60;
-    long nextThresholdAt;
+    long nextThresholdAt, levelSeenAt = started;
+    int sampledPlayers;
+    String sampledParticles = "";
     long minuteStart, minuteFrames, minuteNanos, minuteMax, minuteOver33, minuteAvatars;
 
     Run(Minecraft client, String label) {
@@ -240,6 +247,7 @@ public final class LongRecording {
         level = client.level;
         worldChanges++;
         worldChanged = true;
+        lastFrameAt = 0;
       }
       if (client.gui.screen() != null || client.isPaused() || !client.getWindow().isFocused()) {
         lastFrameAt = 0;
@@ -275,9 +283,11 @@ public final class LongRecording {
       worldChanged = false;
       if (now >= nextThresholdAt) {
         nextThresholdAt = now + 1_000_000_000L;
+        sampledPlayers = client.level.players().size();
+        sampledParticles = client.particleEngine.countParticles();
         logThresholdMs = Math.max(1000.0 / 60, 2.5 * total.quantileMs(0.5));
       }
-      if (now - minuteStart >= MINUTE) closeMinute(client);
+      if (now - minuteStart >= MINUTE) closeMinute();
     }
 
     private void logSlow(
@@ -313,7 +323,7 @@ public final class LongRecording {
       slowSpans.add(new long[] {now - interval, now});
     }
 
-    void closeMinute(Minecraft client) {
+    void closeMinute() {
       if (minuteFrames == 0) return;
       minutes.add(
           new Minute(
@@ -323,8 +333,8 @@ public final class LongRecording {
               minuteMax / 1e6,
               minuteOver33,
               (double) minuteAvatars / minuteFrames,
-              client.level != null ? client.level.players().size() : 0,
-              client.particleEngine.countParticles()));
+              sampledPlayers,
+              sampledParticles));
       minuteStart = System.nanoTime();
       minuteFrames = minuteNanos = minuteMax = minuteOver33 = minuteAvatars = 0;
     }
