@@ -68,16 +68,7 @@ public final class DisplayModelBudget {
   }
 
   public static void beginFrame(Minecraft client, Camera camera) {
-    boolean requested =
-        DrawLessConfig.get().enabled
-            && DrawLessConfig.get().displayModelBudget
-            && (DrawLessConfig.get().extremeDisplayMode
-                    == ru.wilyfox.drawless.config.ExtremeDisplayMode.OFF
-                || DrawLessConfig.get().extremeDisplayMode
-                    == ru.wilyfox.drawless.config.ExtremeDisplayMode.TICKS_ONLY
-                || DrawLessConfig.get().extremeDisplayMode
-                    == ru.wilyfox.drawless.config.ExtremeDisplayMode.STATIC_CACHE
-                || DrawLessConfig.get().extremeDisplayMode.liveCache());
+    boolean requested = DrawLessConfig.get().enabled && DrawLessConfig.get().displayModelBudget;
     if (!requested || client.level == null) {
       if (enabled || !entries.isEmpty()) clear();
       return;

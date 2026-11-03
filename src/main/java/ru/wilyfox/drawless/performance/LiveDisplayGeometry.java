@@ -408,7 +408,7 @@ public final class LiveDisplayGeometry {
       if (reasons[r.ordinal()] > 0) reasonsText.add(r.label + ":" + reasons[r.ordinal()]);
     return String.format(
             Locale.ROOT,
-            "%s; status=%s; meshes=%d; quadSets=%d; aliases=%d; parts=%d; interpolatingParts=%d; visibleMeshes=%d; visibleVertices=%d; instances=%d; quads=%d; draws=%d; fallback=%d; localBytes=%d; indexBytes=%d; meshBuilds=%d; indexRebuilds=%d; geometryUploads=%d; geometryUploadedBytes=%d; instanceUploadedBytes=%d; animatedSprites=%d; pausedTicksTotal=0; poseReused=%d; poseSubmitted=%d; poseReusedTotal=%d; poseSubmittedTotal=%d; capture=%.3fms; upload=%.3fms; drawCpu=%.3fms; framesTotal=%d; captureTotalMs=%.3f; uploadTotalMs=%.3f; drawTotalMs=%.3f; admission=%s",
+            "%s; status=%s; meshes=%d; quadSets=%d; aliases=%d; parts=%d; interpolatingParts=%d; visibleMeshes=%d; visibleVertices=%d; instances=%d; quads=%d; draws=%d; fallback=%d; localBytes=%d; indexBytes=%d; meshBuilds=%d; indexRebuilds=%d; geometryUploads=%d; geometryUploadedBytes=%d; instanceUploadedBytes=%d; animatedSprites=%d; poseReused=%d; poseSubmitted=%d; poseReusedTotal=%d; poseSubmittedTotal=%d; capture=%.3fms; upload=%.3fms; drawCpu=%.3fms; framesTotal=%d; captureTotalMs=%.3f; uploadTotalMs=%.3f; drawTotalMs=%.3f; admission=%s",
             liveMode == null ? DrawLessConfig.get().extremeDisplayMode : liveMode,
             enabled
                 ? "on"

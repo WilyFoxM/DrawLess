@@ -36,11 +36,6 @@ public class NpcFrameCacheMixin {
     EntityRenderState result = null;
     try {
       if (item) {
-        var frozen = ru.wilyfox.drawless.performance.ExtremeDisplayPerformance.reuse(entity);
-        if (frozen != null) {
-          result = frozen;
-          return result;
-        }
         var cached = NpcFrameCache.reuse(entity);
         if (cached != null) {
           result = cached;
