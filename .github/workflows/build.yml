@@ -49,6 +49,11 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x gradlew
       - run: ./gradlew build
+      - name: Check diagnostics stay in the add-on
+        run: |
+          release=$(ls build/libs/drawless-*.jar | grep -v -e sources -e 'drawless-dev-')
+          if unzip -l "$release" | grep -E 'ru/wilyfox/drawless/(diagnostics|dev)/'; then exit 1; fi
+          unzip -l build/libs/drawless-dev-*.jar | grep -q 'ru/wilyfox/drawless/diagnostics/'
       - uses: actions/upload-artifact@v4
         with:
           name: DrawLess
