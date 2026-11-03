@@ -56,7 +56,7 @@ Nothing needs to be installed on the server. **Sodium is optional.**
 Press **F8** in-game to open settings. Rebind it under
 **Options → Controls → Key Binds → DrawLess**.
 
-Settings are grouped into Rendering, Players, Particles, Advanced and Diagnostics.
+Settings are grouped into Rendering, Players, Particles and Advanced.
 Search works across all categories; hover a setting for more information.
 Drag numbers to adjust them, hold Shift for finer control, or use the keyboard.
 Changes save automatically; resetting settings requires confirmation.
