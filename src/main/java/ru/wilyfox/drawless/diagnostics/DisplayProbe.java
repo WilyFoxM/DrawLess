@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ViewArea;
@@ -30,6 +29,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.Items;
 import ru.wilyfox.drawless.compat.RenderModSupport;
 import ru.wilyfox.drawless.util.AtomicFileWriter;
+import ru.wilyfox.drawless.util.ClientDisconnect;
 
 /** Explicit, short diagnostic phases. Idle code never scans the world or writes files. */
 public final class DisplayProbe {
@@ -60,8 +60,7 @@ public final class DisplayProbe {
             finish(client, "complete");
           else if (now - session.requestedAt >= 60 * SECOND) finish(client, "timeout");
         });
-    ClientPlayConnectionEvents.DISCONNECT.register(
-        (handler, client) -> finish(client, "disconnect"));
+    ClientDisconnect.subscribe(client -> finish(client, "disconnect"));
   }
 
   public static String start(Minecraft client, String label) {

@@ -2,7 +2,6 @@ package ru.wilyfox.drawless.performance;
 
 import java.util.*;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
@@ -14,6 +13,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Items;
 import ru.wilyfox.drawless.config.DrawLessConfig;
 import ru.wilyfox.drawless.diagnostics.RenderMetrics;
+import ru.wilyfox.drawless.util.ClientDisconnect;
 
 /**
  * Aggressive render-only pose decimation. Cached poses submit every frame; game/network ticks
@@ -37,7 +37,7 @@ public final class NpcFrameCache {
     if (registered) return;
     registered = true;
     ClientEntityEvents.ENTITY_UNLOAD.register((entity, level) -> parts.remove(entity));
-    ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> clear());
+    ClientDisconnect.subscribe(client -> clear());
   }
 
   public static void clear() {

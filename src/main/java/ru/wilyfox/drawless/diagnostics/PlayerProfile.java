@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.InactivityFpsLimit;
 import net.minecraft.client.Minecraft;
@@ -22,6 +21,7 @@ import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.network.chat.Component;
 import ru.wilyfox.drawless.config.DrawLessConfig;
+import ru.wilyfox.drawless.util.ClientDisconnect;
 
 /** Explicit sampled player profiling. All retained live render data is cleared every frame. */
 public final class PlayerProfile {
@@ -44,8 +44,7 @@ public final class PlayerProfile {
   public record Tag(int actor, String layer) {}
 
   public static void register() {
-    ClientPlayConnectionEvents.DISCONNECT.register(
-        (handler, client) -> finish(client, "disconnect"));
+    ClientDisconnect.subscribe(client -> finish(client, "disconnect"));
     ClientCommandRegistrationCallback.EVENT.register(
         (dispatcher, access) -> {
           var players =

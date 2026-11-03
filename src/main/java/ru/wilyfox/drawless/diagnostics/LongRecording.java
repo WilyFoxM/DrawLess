@@ -18,7 +18,6 @@ import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
@@ -27,6 +26,7 @@ import net.minecraft.network.chat.Component;
 import ru.wilyfox.drawless.config.DrawLessConfig;
 import ru.wilyfox.drawless.performance.FrameWork;
 import ru.wilyfox.drawless.util.AtomicFileWriter;
+import ru.wilyfox.drawless.util.ClientDisconnect;
 
 /**
  * A passive recording during normal play: how often slow frames happen and what was in them. Memory
@@ -37,14 +37,12 @@ import ru.wilyfox.drawless.util.AtomicFileWriter;
 public final class LongRecording {
   private static final long MINUTE = 60_000_000_000L;
   private static final long LIMIT = 60 * MINUTE;
-  private static final long NO_LEVEL_LIMIT = 30_000_000_000L;
   private static final int MAX_SLOW = 5000;
   private static final int REPORT_SLOWEST = 50;
   private static final DateTimeFormatter FILE_TIME =
       DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS").withZone(ZoneId.systemDefault());
   private static Run active;
   private static volatile boolean saving;
-  private static volatile boolean disconnected;
   private static volatile Path lastSaved;
 
   private LongRecording() {}
@@ -81,16 +79,10 @@ public final class LongRecording {
           Run run = active;
           if (run == null) return;
           run.pendingTicks++;
-          long now = System.nanoTime();
-          // A network switching servers clears the level for a moment; only a long absence ends it.
-          if (client.level != null) run.levelSeenAt = now;
-          if (disconnected || now - run.levelSeenAt >= NO_LEVEL_LIMIT)
-            finish(client, "disconnect", false);
-          else if (now - run.started >= LIMIT) finish(client, "time_limit", false);
+          if (System.nanoTime() - run.started >= LIMIT) finish(client, "time_limit", false);
         });
-    // Fired from the network thread too, and leaving a world drops queued client tasks: the next
-    // client tick saves. A server switch in a network does not disconnect, so it records on.
-    ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> disconnected = true);
+    // A server switch in a network clears the level but does not disconnect: it records on.
+    ClientDisconnect.subscribe(client -> finish(client, "disconnect", false));
     ClientLifecycleEvents.CLIENT_STOPPING.register(client -> finish(client, "game_closing", true));
   }
 
@@ -109,7 +101,6 @@ public final class LongRecording {
       return Component.translatable("drawless.benchmark.enter_world");
     if (!label.matches("[A-Za-z0-9_-]{1,24}") || label.equals("stop") || label.equals("status"))
       return Component.translatable("drawless.benchmark.invalid_label");
-    disconnected = false;
     active = new Run(client, label);
     return Component.translatable("drawless.record.started", label, LIMIT / MINUTE);
   }
@@ -205,7 +196,7 @@ public final class LongRecording {
     int pendingTicks, lastAvatars = -1, worldChanges;
     boolean worldChanged;
     double logThresholdMs = 1000.0 / 60;
-    long nextThresholdAt, levelSeenAt = started;
+    long nextThresholdAt;
     int sampledPlayers;
     String sampledParticles = "";
     long minuteStart, minuteFrames, minuteNanos, minuteMax, minuteOver33, minuteAvatars;

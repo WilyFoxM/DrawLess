@@ -11,7 +11,6 @@ import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.InactivityFpsLimit;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -19,6 +18,7 @@ import net.minecraft.network.chat.Component;
 import ru.wilyfox.drawless.compat.RenderModSupport;
 import ru.wilyfox.drawless.config.DrawLessConfig;
 import ru.wilyfox.drawless.util.AtomicFileWriter;
+import ru.wilyfox.drawless.util.ClientDisconnect;
 
 /** Opt-in, client-thread orchestration. Temporary settings are never saved to the config file. */
 public final class BenchmarkSeries {
@@ -79,8 +79,7 @@ public final class BenchmarkSeries {
 
   public static void register() {
     ClientTickEvents.END_CLIENT_TICK.register(BenchmarkSeries::tick);
-    ClientPlayConnectionEvents.DISCONNECT.register(
-        (handler, client) -> abort(client, "disconnect"));
+    ClientDisconnect.subscribe(client -> abort(client, "disconnect"));
     ClientCommandRegistration.register();
   }
 

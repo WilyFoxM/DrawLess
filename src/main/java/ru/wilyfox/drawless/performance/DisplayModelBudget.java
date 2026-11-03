@@ -3,7 +3,6 @@ package ru.wilyfox.drawless.performance;
 import java.util.*;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.color.item.Constant;
@@ -20,6 +19,7 @@ import net.minecraft.world.item.ItemStack;
 import ru.wilyfox.drawless.config.DrawLessConfig;
 import ru.wilyfox.drawless.diagnostics.RenderMetrics;
 import ru.wilyfox.drawless.mixin.*;
+import ru.wilyfox.drawless.util.ClientDisconnect;
 
 /**
  * Cache only item layers; entity transforms, interpolation, lighting and submission stay vanilla.
@@ -47,7 +47,7 @@ public final class DisplayModelBudget {
     if (registered) return;
     registered = true;
     ClientEntityEvents.ENTITY_UNLOAD.register((entity, world) -> entries.remove(entity));
-    ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> clear());
+    ClientDisconnect.subscribe(client -> clear());
     ClientTickEvents.END_CLIENT_TICK.register(
         client -> {
           if (level != client.level || !DrawLessConfig.get().displayModelBudget) {

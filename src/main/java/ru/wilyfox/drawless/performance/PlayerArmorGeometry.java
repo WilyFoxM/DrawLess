@@ -14,7 +14,6 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import java.io.IOException;
 import java.util.*;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Minecraft;
@@ -44,6 +43,7 @@ import ru.wilyfox.drawless.compat.IrisShaders;
 import ru.wilyfox.drawless.compat.RenderModSupport;
 import ru.wilyfox.drawless.config.DrawLessConfig;
 import ru.wilyfox.drawless.mixin.ModelPartCubesAccessor;
+import ru.wilyfox.drawless.util.ClientDisconnect;
 
 /**
  * GPU-retained player armor geometry. Armor model parts keep resource-lifetime local meshes in a
@@ -145,7 +145,7 @@ public final class PlayerArmorGeometry {
   public static void register() {
     if (registered) return;
     registered = true;
-    ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> clear());
+    ClientDisconnect.subscribe(client -> clear());
     ClientLifecycleEvents.CLIENT_STOPPING.register(client -> clear());
     LevelRenderEvents.AFTER_SOLID_FEATURES.register(PlayerArmorGeometry::draw);
   }
