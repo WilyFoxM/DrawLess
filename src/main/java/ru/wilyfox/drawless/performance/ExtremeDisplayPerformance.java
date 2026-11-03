@@ -32,7 +32,7 @@ import ru.wilyfox.drawless.diagnostics.DisplayCostProbe;
 import ru.wilyfox.drawless.diagnostics.RenderMetrics;
 import ru.wilyfox.drawless.util.ClientDisconnect;
 
-/** Diagnostic scene modes and conservative reuse of opaque geometry with an unchanged live pose. */
+/** Item Display membership and conservative reuse of opaque geometry with an unchanged pose. */
 public final class ExtremeDisplayPerformance {
   private static final int MAX_PARTS = 4096;
   private static final long MAX_BYTES = 128L * 1024 * 1024;
@@ -43,7 +43,6 @@ public final class ExtremeDisplayPerformance {
   private static final IdentityHashMap<Display.ItemDisplay, Snapshot> snapshots =
       new IdentityHashMap<>();
   private static final ArrayList<Batch> batches = new ArrayList<>();
-  private static final ArrayList<Display.ItemDisplay> pending = new ArrayList<>();
   private static final HashSet<UUID> roots = new HashSet<>();
   private static final IdentityHashMap<Display.ItemDisplay, StablePose> stable =
       new IdentityHashMap<>();
@@ -63,14 +62,7 @@ public final class ExtremeDisplayPerformance {
   private static ClientLevel world;
   private static ExtremeDisplayMode mode = ExtremeDisplayMode.OFF;
   private static boolean all, registered, dirty = true, gpuDirty;
-  private static long scanTick = Long.MIN_VALUE,
-      bytes,
-      skipped,
-      captured,
-      drawCalls,
-      rebuilds,
-      skippedTicks;
-  private static long lastProfiledTicks;
+  private static long scanTick = Long.MIN_VALUE, bytes, skipped, captured, drawCalls, rebuilds;
   private static long selectNanos, captureNanos, uploadNanos, drawNanos;
   private static Vec3 origin = Vec3.ZERO;
   private static List<TextureAtlasSprite> animatedSprites = List.of();
@@ -99,10 +91,6 @@ public final class ExtremeDisplayPerformance {
         });
     ClientDisconnect.subscribe(client -> clear());
     ClientLifecycleEvents.CLIENT_STOPPING.register(client -> clear());
-    LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES.register(
-        context -> {
-          if (mode == ExtremeDisplayMode.FREEZE) draw(context);
-        });
     LevelRenderEvents.AFTER_SOLID_FEATURES.register(
         context -> {
           if (mode == ExtremeDisplayMode.STATIC_CACHE) draw(context);
@@ -122,7 +110,6 @@ public final class ExtremeDisplayPerformance {
     closeBatches();
     targets.clear();
     snapshots.clear();
-    pending.clear();
     roots.clear();
     world = null;
     stable.clear();
@@ -141,10 +128,7 @@ public final class ExtremeDisplayPerformance {
     bytes =
         skipped =
             captured =
-                drawCalls =
-                    rebuilds =
-                        skippedTicks = selectNanos = captureNanos = uploadNanos = drawNanos = 0;
-    lastProfiledTicks = 0;
+                drawCalls = rebuilds = selectNanos = captureNanos = uploadNanos = drawNanos = 0;
   }
 
   private static void closeBatches() {
@@ -217,55 +201,7 @@ public final class ExtremeDisplayPerformance {
         DisplayCostProbe.global("Static validation", validationNanos);
       }
       // Visibility is resolved by vanilla below, before rebuilding the opaque GPU batches.
-      return;
     }
-    if (mode == ExtremeDisplayMode.FREEZE && !pending.isEmpty()) {
-      long start = System.nanoTime();
-      try (var ignored = RenderMetrics.getInstance().scope("render/extremeDisplay/capture")) {
-        var iterator = pending.iterator();
-        while (iterator.hasNext()) {
-          var entity = iterator.next();
-          if (entity.isRemoved() || !targets.contains(entity)) {
-            iterator.remove();
-            continue;
-          }
-          if (entity.getItemStack().isEmpty())
-            continue; // Spawn packets can populate the item later.
-          if (snapshots.size() >= MAX_PARTS || bytes >= MAX_BYTES) break;
-          var state =
-              (ItemDisplayEntityRenderState)
-                  client.getEntityRenderDispatcher().extractEntity(entity, 1);
-          if (state.renderState == null || state.item.isEmpty()) continue;
-          freezePose(state);
-          Snapshot snapshot;
-          try (var collector = new Capture()) {
-            client
-                .getEntityRenderDispatcher()
-                .submit(
-                    state,
-                    frame.cameraRenderState,
-                    state.x - origin.x,
-                    state.y - origin.y,
-                    state.z - origin.z,
-                    new PoseStack(),
-                    collector);
-            var meshes = collector.finish();
-            boolean fallback = !collector.getSubmitsPerOrder().isEmpty() || meshes.isEmpty();
-            snapshot = new Snapshot(state, fallback ? List.of() : meshes, fallback);
-            if (!fallback) snapshot.sprites = List.copyOf(collector.sprites);
-          }
-          if (bytes + snapshot.bytes() > MAX_BYTES) snapshot = new Snapshot(state, List.of(), true);
-          snapshots.put(entity, snapshot);
-          bytes += snapshot.bytes();
-          iterator.remove();
-          captured++;
-          gpuDirty = true;
-        }
-      } finally {
-        captureNanos = System.nanoTime() - start;
-      }
-    }
-    if (gpuDirty) rebuildGpu();
   }
 
   private static void refresh() {
@@ -292,9 +228,6 @@ public final class ExtremeDisplayPerformance {
         gpuDirty = true;
       }
     }
-    pending.clear();
-    if (mode == ExtremeDisplayMode.FREEZE)
-      for (var target : targets) if (!snapshots.containsKey(target)) pending.add(target);
     stable.keySet().removeIf(entity -> !targets.contains(entity));
     admissions.keySet().removeIf(entity -> !targets.contains(entity));
   }
@@ -355,7 +288,7 @@ public final class ExtremeDisplayPerformance {
         var pose = stable.get(entity);
         if (attempts >= 4 || attempts > 0 && System.nanoTime() - start > 2_000_000L) continue;
         attempts++;
-        try (var collector = new Capture(true)) {
+        try (var collector = new Capture()) {
           client
               .getEntityRenderDispatcher()
               .submit(
@@ -377,7 +310,7 @@ public final class ExtremeDisplayPerformance {
             decision(admission, pose.rejection);
             continue;
           }
-          var snapshot = new Snapshot(itemState, meshes, false);
+          var snapshot = new Snapshot(itemState, meshes);
           snapshot.sprites = List.copyOf(collector.sprites);
           if (bytes + snapshot.bytes() > MAX_BYTES) continue;
           snapshots.put(entity, snapshot);
@@ -585,52 +518,6 @@ public final class ExtremeDisplayPerformance {
                 || id != null && !id.toString().equals("minecraft:bone"));
   }
 
-  private static void freezePose(ItemDisplayEntityRenderState state) {
-    var render = state.renderState;
-    float p = state.interpolationProgress;
-    state.renderState =
-        new Display.RenderState(
-            Display.GenericInterpolator.constant(render.transformation().get(p)),
-            render.billboardConstraints(),
-            render.brightnessOverride(),
-            Display.FloatInterpolator.constant(render.shadowRadius().get(p)),
-            Display.FloatInterpolator.constant(render.shadowStrength().get(p)),
-            render.glowColorOverride());
-    state.interpolationProgress = 0;
-  }
-
-  /** -1: vanilla, 0: omit extraction, 1: frozen fallback uses the saved render state. */
-  public static int visibility(Entity entity) {
-    if (!requested() || entity.level() != world || !targets.contains(entity)) return -1;
-    if (mode == ExtremeDisplayMode.TICKS_ONLY || mode == ExtremeDisplayMode.STATIC_CACHE) return -1;
-    if (mode == ExtremeDisplayMode.UNRENDER) {
-      skipped++;
-      return 0;
-    }
-    var snapshot = snapshots.get(entity);
-    if (snapshot == null) return -1;
-    if (snapshot.fallback) return 1;
-    skipped++;
-    return 0;
-  }
-
-  public static EntityRenderState reuse(Entity entity) {
-    if (!requested() || mode != ExtremeDisplayMode.FREEZE || entity.level() != world) return null;
-    var snapshot = snapshots.get(entity);
-    return snapshot == null ? null : snapshot.state;
-  }
-
-  public static boolean skipTick(Display entity) {
-    if (!requested() || entity.level() != world || !targets.contains(entity)) return false;
-    boolean skip =
-        mode == ExtremeDisplayMode.TICKS_ONLY
-            || DrawLessConfig.get().extremePauseDisplayTicks
-                && (mode == ExtremeDisplayMode.UNRENDER
-                    || mode == ExtremeDisplayMode.FREEZE && snapshots.containsKey(entity));
-    if (skip) skippedTicks++;
-    return skip;
-  }
-
   private static void rebuildGpu() {
     long start = System.nanoTime();
     try (var ignored = RenderMetrics.getInstance().scope("render/extremeDisplay/upload")) {
@@ -657,7 +544,7 @@ public final class ExtremeDisplayPerformance {
             var gpu =
                 RenderSystem.getDevice()
                     .createBuffer(
-                        () -> "DrawLess frozen Item Display scene", GpuBuffer.USAGE_VERTEX, data);
+                        () -> "DrawLess static Item Display scene", GpuBuffer.USAGE_VERTEX, data);
             next.add(new Batch(entry.getKey(), gpu, vertices / 4 * 6));
           } finally {
             MemoryUtil.memFree(data);
@@ -679,7 +566,7 @@ public final class ExtremeDisplayPerformance {
 
   private static void draw(LevelRenderContext context) {
     if (!requested()
-        || (mode != ExtremeDisplayMode.FREEZE && mode != ExtremeDisplayMode.STATIC_CACHE)
+        || mode != ExtremeDisplayMode.STATIC_CACHE
         || world != Minecraft.getInstance().level) return;
     long start = System.nanoTime();
     drawCalls = 0;
@@ -722,35 +609,26 @@ public final class ExtremeDisplayPerformance {
       profiler.incrementCounter("extremeDisplay/skippedStates", skipped);
       profiler.incrementCounter("extremeDisplay/capturedParts", captured);
       profiler.incrementCounter("extremeDisplay/targets", targets.size());
-      profiler.incrementCounter("extremeDisplay/skippedTicks", skippedTicks - lastProfiledTicks);
     }
-    lastProfiledTicks = skippedTicks;
   }
 
   public static String diagnostic() {
     if (DrawLessConfig.get().extremeDisplayMode.liveCache())
       return LiveDisplayGeometry.diagnostic();
     if (mode == ExtremeDisplayMode.OFF) return "off";
-    int fallback = 0;
-    for (var snapshot : snapshots.values()) if (snapshot.fallback) fallback++;
     return String.format(
             Locale.ROOT,
-            "%s; scope=%s; pauseTicks=%s; targets=%d; snapshots=%d; fallback=%d; skippedStates=%d; captured=%d; batches=%d; drawCalls=%d; verticesBytes=%d; rebuilds=%d; pausedTicksTotal=%d; membership=%.3fms; capture=%.3fms; upload=%.3fms; drawCpu=%.3fms; staticInvalidations=%d; unstable=%d; unsafeModel=%d; rejectedVisual=%d",
+            "%s; scope=%s; targets=%d; snapshots=%d; skippedStates=%d; captured=%d; batches=%d; drawCalls=%d; verticesBytes=%d; rebuilds=%d; membership=%.3fms; capture=%.3fms; upload=%.3fms; drawCpu=%.3fms; staticInvalidations=%d; unstable=%d; unsafeModel=%d; rejectedVisual=%d",
             mode,
             all ? "all-item-displays" : "modelengine",
-            mode == ExtremeDisplayMode.TICKS_ONLY
-                || mode != ExtremeDisplayMode.STATIC_CACHE
-                    && DrawLessConfig.get().extremePauseDisplayTicks,
             targets.size(),
             snapshots.size(),
-            fallback,
             skipped,
             captured,
             batches.size(),
             drawCalls,
             bytes,
             rebuilds,
-            skippedTicks,
             selectNanos / 1e6,
             captureNanos / 1e6,
             uploadNanos / 1e6,
@@ -782,16 +660,14 @@ public final class ExtremeDisplayPerformance {
   private static final class Snapshot {
     final ItemDisplayEntityRenderState state;
     final List<Mesh> meshes;
-    final boolean fallback;
     boolean visible = true, visibilitySeen = true;
     List<TextureAtlasSprite> sprites = List.of();
     long lightTick = Long.MIN_VALUE;
     boolean lightValid = true;
 
-    Snapshot(ItemDisplayEntityRenderState state, List<Mesh> meshes, boolean fallback) {
+    Snapshot(ItemDisplayEntityRenderState state, List<Mesh> meshes) {
       this.state = state;
       this.meshes = meshes;
-      this.fallback = fallback;
     }
 
     boolean lightMatches(Minecraft client, Display.ItemDisplay entity, long tick) {
@@ -816,17 +692,8 @@ public final class ExtremeDisplayPerformance {
   private record Batch(RenderType type, GpuBuffer buffer, int indexCount) {}
 
   private static final class Capture extends SubmitNodeStorage implements AutoCloseable {
-    private final boolean strict;
     private boolean rejected;
     private Reason reason;
-
-    Capture() {
-      this(false);
-    }
-
-    Capture(boolean strict) {
-      this.strict = strict;
-    }
 
     private final LinkedHashMap<RenderType, Builder> builders = new LinkedHashMap<>();
     private final QuadInstance instance = new QuadInstance();
@@ -843,7 +710,7 @@ public final class ExtremeDisplayPerformance {
         int[] tints,
         List<BakedQuad> quads,
         ItemStackRenderState.FoilType foil) {
-      if (strict && (foil != ItemStackRenderState.FoilType.NONE || outline != 0)) {
+      if (foil != ItemStackRenderState.FoilType.NONE || outline != 0) {
         rejected = true;
         reason = Reason.FOIL;
         return;
@@ -854,7 +721,7 @@ public final class ExtremeDisplayPerformance {
         var material = quad.materialInfo();
         var type = material.itemRenderType();
         if (material.sprite().isAnimated()) sprites.add(material.sprite());
-        if (strict && (type.hasBlending() || type.sortOnUpload())) {
+        if (type.hasBlending() || type.sortOnUpload()) {
           rejected = true;
           reason = Reason.TRANSPARENCY;
           return;

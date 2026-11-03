@@ -533,7 +533,7 @@ public final class DisplayProbe {
     for (Sample sample : samples)
       out.append(String.format(Locale.ROOT, "| %.2f | %s |\n", sample.seconds, sample.npcBudget));
     out.append(
-        "\n## Extreme Item Display performance by sample\n\nFreeze retains static vertices on the GPU, batching by material. Draw calls cover this cached scene only (previous rendered frame). Prepared counts above exclude these GPU-only parts. Unrender omits extraction and drawing. Tick pausing depends on pauseTicks; TICKS_ONLY pauses Display ticks while preserving ordinary geometry. STATIC_CACHE reuses only stable opaque geometry, with live ticks, immediate pose/light invalidation and vanilla visibility; unsupported visuals stay on the ordinary path. LIVE_CACHE shares local opaque/cutout geometry while streaming current vanilla matrices/light/tint every frame. LIVE_EXTRACT additionally recycles only successfully GPU-owned states, with full vanilla extraction/finalization every frame, and bypasses light probing only for server brightness overrides. stateFresh includes ordinary fallback; stateReused counts state allocations avoided, not frozen poses. Mesh/index rebuild and upload counters are cumulative; instances/quads/fallback describe a frame. Incoming packets still apply; GPU elapsed time is not measured.\n\n| s | Extreme scene |\n| ---: | --- |\n");
+        "\n## Extreme Item Display performance by sample\n\nThe static scene retains vertices on the GPU, batching by material. Draw calls cover this cached scene only (previous rendered frame). Prepared counts above exclude these GPU-only parts. STATIC_CACHE reuses only stable opaque geometry, with live ticks, immediate pose/light invalidation and vanilla visibility; unsupported visuals stay on the ordinary path. LIVE_CACHE shares local opaque/cutout geometry while streaming current vanilla matrices/light/tint every frame. LIVE_EXTRACT additionally recycles only successfully GPU-owned states, with full vanilla extraction/finalization every frame, and bypasses light probing only for server brightness overrides. stateFresh includes ordinary fallback; stateReused counts state allocations avoided, not frozen poses. Mesh/index rebuild and upload counters are cumulative; instances/quads/fallback describe a frame. Incoming packets still apply; GPU elapsed time is not measured.\n\n| s | Extreme scene |\n| ---: | --- |\n");
     for (Sample sample : samples)
       out.append(String.format(Locale.ROOT, "| %.2f | %s |\n", sample.seconds, sample.extreme));
     out.append(
@@ -668,14 +668,6 @@ public final class DisplayProbe {
               + config.extremeDisplayMode
               + "; entire item scene "
               + config.extremeAllItemDisplays
-              + "; pause display ticks "
-              + (config.extremeDisplayMode
-                      == ru.wilyfox.drawless.config.ExtremeDisplayMode.TICKS_ONLY
-                  || (config.extremeDisplayMode
-                              == ru.wilyfox.drawless.config.ExtremeDisplayMode.FREEZE
-                          || config.extremeDisplayMode
-                              == ru.wilyfox.drawless.config.ExtremeDisplayMode.UNRENDER)
-                      && config.extremePauseDisplayTicks)
               + "; Sodium "
               + net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("sodium")
               + "; ImmediatelyFast "

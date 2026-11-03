@@ -26,10 +26,9 @@ public class ExtremeDisplayVisibilityMixin {
       double y,
       double z,
       Operation<Boolean> original) {
-    if (ExtremeDisplayPerformance.staticCache())
-      return ExtremeDisplayPerformance.staticVisibility(
-          entity, original.call(extractor, entity, frustum, x, y, z));
-    int visible = ExtremeDisplayPerformance.visibility(entity);
-    return visible < 0 ? original.call(extractor, entity, frustum, x, y, z) : visible == 1;
+    boolean visible = original.call(extractor, entity, frustum, x, y, z);
+    return ExtremeDisplayPerformance.staticCache()
+        ? ExtremeDisplayPerformance.staticVisibility(entity, visible)
+        : visible;
   }
 }

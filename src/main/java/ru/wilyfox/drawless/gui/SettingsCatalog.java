@@ -193,37 +193,11 @@ final class SettingsCatalog {
             () -> c().adaptiveNpcBudget,
             v -> c().adaptiveNpcBudget = v));
     options.add(
-        choice(
-            "diagnostic_mode",
-            Page.DIAGNOSTICS,
-            () ->
-                switch (c().extremeDisplayMode) {
-                  case FREEZE, UNRENDER, TICKS_ONLY -> modeName(c().extremeDisplayMode);
-                  default -> onOff(false);
-                },
-            direction -> {
-              var modes =
-                  List.of(
-                      ExtremeDisplayMode.LIVE_CACHE,
-                      ExtremeDisplayMode.FREEZE,
-                      ExtremeDisplayMode.UNRENDER,
-                      ExtremeDisplayMode.TICKS_ONLY);
-              int index = Math.max(0, modes.indexOf(c().extremeDisplayMode));
-              c().extremeDisplayMode = modes.get(Math.floorMod(index + direction, modes.size()));
-            },
-            () -> null));
-    options.add(
         toggle(
             "all_displays",
             Page.DIAGNOSTICS,
             () -> c().extremeAllItemDisplays,
             v -> c().extremeAllItemDisplays = v));
-    options.add(
-        toggle(
-            "pause_ticks",
-            Page.DIAGNOSTICS,
-            () -> c().extremePauseDisplayTicks,
-            v -> c().extremePauseDisplayTicks = v));
     return List.copyOf(options);
   }
 
