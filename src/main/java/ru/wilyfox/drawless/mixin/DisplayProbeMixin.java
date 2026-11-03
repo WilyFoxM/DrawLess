@@ -46,5 +46,6 @@ public class DisplayProbeMixin {
     ru.wilyfox.drawless.performance.ExtremeDisplayPerformance.endFrame();
     ru.wilyfox.drawless.diagnostics.DisplayCostProbe.sceneEnd();
     DisplayProbe.onFrame(Minecraft.getInstance(), camera, frustum, state);
+    ru.wilyfox.drawless.diagnostics.LongRecording.onFrame(Minecraft.getInstance(), state);
   }
 }

@@ -106,6 +106,7 @@ public final class PlayerProfile {
   public static Component start(Minecraft client, String label, Mode mode) {
     if (busy()
         || DisplayProbe.busy()
+        || LongRecording.busy()
         || BenchmarkSeries.running()
         || RenderMetrics.getInstance().isEnabled())
       return Component.translatable("drawless.player_profile.busy");

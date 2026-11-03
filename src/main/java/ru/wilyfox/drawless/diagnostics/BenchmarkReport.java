@@ -56,6 +56,7 @@ final class BenchmarkReport {
       phase.addProperty("menu_frames", run.menuFrames());
       phase.addProperty("unfocused_frames", run.unfocusedFrames());
       phase.add("samples", gson.toJsonTree(run.samples()));
+      phase.add("frames", gson.toJsonTree(run.frames()));
       phases.add(phase);
     }
     json.add("phases", phases);
@@ -131,6 +132,19 @@ final class BenchmarkReport {
         "One scene/session; no confidence interval, GPU time or visual-parity conclusion is inferred.");
     warnings.add(
         "Particle stage timings are CPU-only; encoding is nested in preparation. Shared upload and GPU execution are not isolated.");
+    var tails = runs.stream().map(r -> r.frames().tail()).toList();
+    boolean tailComplete = complete && tails.stream().allMatch(t -> t.frames() > 0);
+    List<FrameTail.Pair> p95Pairs = List.of(), p99Pairs = List.of(), lowPairs = List.of();
+    if (tailComplete) {
+      p95Pairs = FrameTail.pairs(tails.stream().map(FrameTail::p95Ms).toList());
+      p99Pairs = FrameTail.pairs(tails.stream().map(FrameTail::p99Ms).toList());
+      lowPairs = FrameTail.pairs(tails.stream().map(FrameTail::low1Fps).toList());
+      var tailJson = new JsonObject();
+      tailJson.add("p95_ms", gson.toJsonTree(p95Pairs));
+      tailJson.add("p99_ms", gson.toJsonTree(p99Pairs));
+      tailJson.add("low1_fps", gson.toJsonTree(lowPairs));
+      json.add("tail_pairs", tailJson);
+    }
     json.add("pairs", gson.toJsonTree(pairs));
     json.add("population_matched_pairs", gson.toJsonTree(matchedPairs));
     json.add("population_adjusted_pairs", gson.toJsonTree(adjustedPairs));
@@ -280,6 +294,42 @@ final class BenchmarkReport {
                 "\nMean population-adjusted change: **%+.2f%%** (separate OFF/ON slopes: %+.2f%%).\n",
                 mean(adjustedPairs),
                 mean(BracketedComparison.pairs(adjusted.separateSlopeFps()))));
+      }
+    }
+    if (runs.stream().anyMatch(r -> r.frames().tail().frames() > 0)) {
+      out.append(
+          "\n## Frame time tail\n\nEvery measured frame of each phase (details in the phase reports). 1% low is the FPS of the 99th percentile frame time. Percentiles of one 20-second phase rest on few frames: p99 on about 1% of them.\n\n| Phase | Frames | Median ms | p95 ms | p99 ms | 1% low FPS | Slow frames | Frames with GC pause | Frames with DrawLess first-time work |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n");
+      for (var run : runs) {
+        var f = run.frames();
+        var t = f.tail();
+        out.append(
+            String.format(
+                Locale.ROOT,
+                "| %s | %d | %.3f | %.3f | %.3f | %.1f | %d | %d | %d |\n",
+                run.label(),
+                t.frames(),
+                t.medianMs(),
+                t.p95Ms(),
+                t.p99Ms(),
+                t.low1Fps(),
+                t.slowFrames(),
+                f.framesWithGcPause(),
+                f.framesWithDrawlessWork()));
+      }
+      if (tailComplete) {
+        out.append(
+            "\n| ON phase | p95 change | p99 change | 1% low change |\n| ---: | ---: | ---: | ---: |\n");
+        for (int i = 0; i < p99Pairs.size(); i++)
+          out.append(
+              String.format(
+                  Locale.ROOT,
+                  "| %d | %+.2f%% | %+.2f%% | %+.2f%% |\n",
+                  p99Pairs.get(i).onPhase(),
+                  p95Pairs.get(i).changePercent(),
+                  p99Pairs.get(i).changePercent(),
+                  lowPairs.get(i).changePercent()));
+        out.append(
+            "\nNegative p95/p99 changes are shorter frame times; each ON is compared with the mean of its neighboring OFF phases.\n");
       }
     }
     out.append("\n## Review flags\n\n");

@@ -90,7 +90,8 @@ public final class BenchmarkSeries {
 
   public static Component start(Minecraft client, int brackets, String label, Target target) {
     BracketedComparison.phases(brackets);
-    if (PlayerProfile.busy()) return Component.translatable("drawless.player_profile.busy");
+    if (PlayerProfile.busy() || LongRecording.busy())
+      return Component.translatable("drawless.player_profile.busy");
     if (running() || DisplayProbe.busy()) return text("busy");
     if (client.level == null || client.player == null) return text("enter_world");
     if (!label.matches("[A-Za-z0-9_-]{1,24}")) return text("invalid_label");
@@ -263,7 +264,8 @@ public final class BenchmarkSeries {
             run.target.id(),
             run.reason,
             run.original,
-            run.anchor == null ? "not_started" : run.anchor.options,
+            // Hardware is reported but not compared: the CPU name may arrive after the anchor.
+            (run.anchor == null ? "not_started" : run.anchor.options) + "; " + Hardware.describe(),
             run.environmentWarnings,
             run.results);
     CompletableFuture.runAsync(

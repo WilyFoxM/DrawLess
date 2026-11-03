@@ -48,10 +48,12 @@ public final class DisplayProbe {
   public static void register() {
     if (registered) return;
     registered = true;
+    Hardware.request();
     ClientTickEvents.END_CLIENT_TICK.register(
         client -> {
           Session session = active;
           if (session == null) return;
+          FrameRecorder.noteTick();
           long now = System.nanoTime();
           if (client.level != session.level) finish(client, "world_changed");
           else if (session.measurementStart != 0 && now - session.measurementStart >= DURATION)
@@ -63,7 +65,7 @@ public final class DisplayProbe {
   }
 
   public static String start(Minecraft client, String label) {
-    if (PlayerProfile.busy())
+    if (PlayerProfile.busy() || LongRecording.busy())
       return Component.translatable("drawless.player_profile.busy").getString();
     if (BenchmarkSeries.running())
       return Component.translatable("drawless.benchmark.busy").getString();
@@ -93,8 +95,11 @@ public final class DisplayProbe {
       Path directory,
       String metadata,
       Consumer<Result> completion) {
-    if (busy() || PlayerProfile.busy() || client.level == null || client.player == null)
-      return false;
+    if (busy()
+        || PlayerProfile.busy()
+        || LongRecording.busy()
+        || client.level == null
+        || client.player == null) return false;
     active = new Session(label, client);
     active.directory = directory;
     active.metadata = metadata;
@@ -116,7 +121,8 @@ public final class DisplayProbe {
       double seconds,
       int menuFrames,
       int unfocusedFrames,
-      List<Sample> samples) {}
+      List<Sample> samples,
+      FrameRecorder.Summary frames) {}
 
   public static String status() {
     return active != null
@@ -158,17 +164,20 @@ public final class DisplayProbe {
       session.nextSampleAt = session.measurementStart;
     }
     if (now < session.measurementStart) return;
-    if (session.lastFrameAt != 0) {
+    long interval = session.lastFrameAt != 0 ? now - session.lastFrameAt : 0;
+    if (interval > 0) {
       session.frameIntervals++;
-      session.frameIntervalNanos += now - session.lastFrameAt;
+      session.frameIntervalNanos += interval;
       session.windowIntervals++;
-      session.windowNanos += now - session.lastFrameAt;
+      session.windowNanos += interval;
     }
     session.lastFrameAt = now;
     // Every measured frame: a window is comparable only if its rendered population held still.
     int avatars = 0;
     for (var entityState : state.entityRenderStates)
       if (entityState instanceof AvatarRenderState) avatars++;
+    if (session.frames == null) session.frames = new FrameRecorder(now);
+    session.frames.frame(now, interval, avatars);
     session.windowMinAvatars = Math.min(session.windowMinAvatars, avatars);
     session.windowMaxAvatars = Math.max(session.windowMaxAvatars, avatars);
     session.windowAvatarSum += avatars;
@@ -344,6 +353,7 @@ public final class DisplayProbe {
         session.frameIntervalNanos > 0
             ? session.frameIntervals * 1e9 / session.frameIntervalNanos
             : 0;
+    var frames = session.frames != null ? session.frames.finish() : FrameRecorder.Summary.EMPTY;
     String markdown =
         report(
                 session.label,
@@ -353,6 +363,7 @@ public final class DisplayProbe {
                 session.menuFrames,
                 session.unfocusedFrames,
                 List.copyOf(session.samples))
+            + FrameRecorder.markdown(frames)
             + DisplayCostProbe.report();
     DisplayCostProbe.stop();
     Path output =
@@ -368,7 +379,8 @@ public final class DisplayProbe {
             session.frameIntervalNanos / 1e9,
             session.menuFrames,
             session.unfocusedFrames,
-            List.copyOf(session.samples));
+            List.copyOf(session.samples),
+            frames);
     CompletableFuture.runAsync(
         () -> {
           Result completed = result;
@@ -389,7 +401,8 @@ public final class DisplayProbe {
                     result.seconds,
                     result.menuFrames,
                     result.unfocusedFrames,
-                    result.samples);
+                    result.samples,
+                    result.frames);
           } finally {
             saving = false;
           }
@@ -572,6 +585,7 @@ public final class DisplayProbe {
     int windowMinAvatars = Integer.MAX_VALUE, windowMaxAvatars = -1, windowAvatarFrames;
     int menuFrames, unfocusedFrames;
     Path directory;
+    FrameRecorder frames;
     String metadata = "";
     Consumer<Result> completion;
 
@@ -670,7 +684,9 @@ public final class DisplayProbe {
               + "; Iris "
               + ru.wilyfox.drawless.compat.RenderModSupport.IRIS
               + "; shader pack "
-              + ru.wilyfox.drawless.compat.IrisShaders.packInUse();
+              + ru.wilyfox.drawless.compat.IrisShaders.packInUse()
+              + "; "
+              + Hardware.describe();
     }
   }
 
