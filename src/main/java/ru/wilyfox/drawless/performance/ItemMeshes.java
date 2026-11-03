@@ -93,7 +93,10 @@ final class ItemMeshes {
     buildsThisFrame = 0;
     buildNanos = 0;
     now = System.nanoTime();
-    if (pressure && now >= nextCompaction) compact();
+    if (pressure && now >= nextCompaction) {
+      compact();
+      FrameWork.add(FrameWork.Kind.COMPACTION, System.nanoTime() - now);
+    }
   }
 
   /**
@@ -293,7 +296,9 @@ final class ItemMeshes {
       }
       return remember(key, alias, new Geometry(Status.READY, List.copyOf(meshes)));
     } finally {
-      buildNanos += System.nanoTime() - start;
+      long elapsed = System.nanoTime() - start;
+      buildNanos += elapsed;
+      FrameWork.add(FrameWork.Kind.ITEM_MESH, elapsed);
     }
   }
 

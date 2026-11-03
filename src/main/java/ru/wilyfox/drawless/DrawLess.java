@@ -26,6 +26,7 @@ public final class DrawLess implements ClientModInitializer {
     LiveDisplayGeometry.register();
     ParticleSpatialContext.register();
     DisplayProbe.register();
+    ru.wilyfox.drawless.diagnostics.LongRecording.register();
     DisplayCostProbe.register();
     BenchmarkSeries.register();
     PlayerProfile.register();
@@ -43,6 +44,44 @@ public final class DrawLess implements ClientModInitializer {
                                   context.getSource().sendFeedback(Component.literal(status()));
                                   return 1;
                                 }))
+                    .then(
+                        ClientCommands.literal("record")
+                            .then(
+                                ClientCommands.literal("stop")
+                                    .executes(
+                                        context -> {
+                                          context
+                                              .getSource()
+                                              .sendFeedback(
+                                                  ru.wilyfox.drawless.diagnostics.LongRecording
+                                                      .stop(context.getSource().getClient()));
+                                          return 1;
+                                        }))
+                            .then(
+                                ClientCommands.literal("status")
+                                    .executes(
+                                        context -> {
+                                          context
+                                              .getSource()
+                                              .sendFeedback(
+                                                  ru.wilyfox.drawless.diagnostics.LongRecording
+                                                      .status());
+                                          return 1;
+                                        }))
+                            .then(
+                                ClientCommands.argument("label", StringArgumentType.word())
+                                    .executes(
+                                        context -> {
+                                          context
+                                              .getSource()
+                                              .sendFeedback(
+                                                  ru.wilyfox.drawless.diagnostics.LongRecording
+                                                      .start(
+                                                          context.getSource().getClient(),
+                                                          StringArgumentType.getString(
+                                                              context, "label")));
+                                          return 1;
+                                        })))
                     .then(
                         ClientCommands.literal("probe")
                             .then(
