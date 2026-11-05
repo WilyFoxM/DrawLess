@@ -41,6 +41,8 @@
   "drawless.setting.text_reuse.description": "Experimental. Reuses the current text/name-tag buffer within a preparation pass. Off by default.",
   "drawless.setting.live_view_culling": "Skip displays outside the view",
   "drawless.setting.live_view_culling.description": "Item Displays on the GPU that are outside the camera view are skipped for the frame. Ticks and animation keep running. A part moving very quickly into view may appear a moment late.",
+  "drawless.setting.live_pose_fast_path": "Fast poses for animated displays",
+  "drawless.setting.live_pose_fast_path.description": "Computes the pose of interpolating Item Display parts directly instead of running them through vanilla submission every frame. A part whose pose this does not reproduce keeps the ordinary path.",
   "drawless.setting.model_cache": "Display model cache",
   "drawless.setting.model_cache.description": "Reuses Item Display model layers and refreshes them within a bounded CPU budget.",
   "drawless.setting.adaptive_budget": "Adaptive model budget",
