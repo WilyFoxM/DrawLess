@@ -2,7 +2,9 @@ package ru.wilyfox.drawless.performance;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import java.nio.ByteBuffer;
+import org.joml.Matrix3f;
 import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
 import org.joml.Vector3f;
 
 /**
@@ -12,6 +14,7 @@ import org.joml.Vector3f;
  */
 class RetainedInstance {
   private static final Vector3f normal = new Vector3f();
+  private static final Matrix3f normalMatrix = new Matrix3f();
 
   RetainedMesh mesh;
   final Matrix4f transform = new Matrix4f();
@@ -32,6 +35,18 @@ class RetainedInstance {
     // vanilla's packed signed-byte normal writer, once per instance rather than per face.
     for (int i = 0; i < 3; i++) {
       pose.transformNormal(i == 0 ? 1 : 0, i == 1 ? 1 : 0, i == 2 ? 1 : 0, normal);
+      normals[i * 3] = (byte) (int) (normal.x * 127) / 127f;
+      normals[i * 3 + 1] = (byte) (int) (normal.y * 127) / 127f;
+      normals[i * 3 + 2] = (byte) (int) (normal.z * 127) / 127f;
+    }
+  }
+
+  /** The same result as {@link #set} for an already known pose matrix. */
+  void setPose(Matrix4fc pose) {
+    transform.set(pose);
+    pose.normal(normalMatrix);
+    for (int i = 0; i < 3; i++) {
+      normal.set(i == 0 ? 1 : 0, i == 1 ? 1 : 0, i == 2 ? 1 : 0).mul(normalMatrix).normalize();
       normals[i * 3] = (byte) (int) (normal.x * 127) / 127f;
       normals[i * 3 + 1] = (byte) (int) (normal.y * 127) / 127f;
       normals[i * 3 + 2] = (byte) (int) (normal.z * 127) / 127f;

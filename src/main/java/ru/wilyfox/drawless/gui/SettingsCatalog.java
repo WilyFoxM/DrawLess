@@ -141,6 +141,12 @@ final class SettingsCatalog {
             v -> c().liveViewCulling = v));
     options.add(
         toggle(
+            "live_pose_fast_path",
+            Page.RENDERING,
+            () -> c().livePoseFastPath,
+            v -> c().livePoseFastPath = v));
+    options.add(
+        toggle(
             "model_cache",
             Page.RENDERING,
             () -> c().displayModelBudget,

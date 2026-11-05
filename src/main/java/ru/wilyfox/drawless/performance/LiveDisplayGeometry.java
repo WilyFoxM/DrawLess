@@ -25,11 +25,14 @@ import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.phys.AABB;
+import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 import ru.wilyfox.drawless.DrawLess;
 import ru.wilyfox.drawless.compat.IrisShaders;
 import ru.wilyfox.drawless.compat.RenderModSupport;
 import ru.wilyfox.drawless.config.DrawLessConfig;
 import ru.wilyfox.drawless.config.ExtremeDisplayMode;
+import ru.wilyfox.drawless.mixin.DisplayOrientationAccessor;
 import ru.wilyfox.drawless.observe.Observation;
 import ru.wilyfox.drawless.util.ClientDisconnect;
 
@@ -72,6 +75,15 @@ public final class LiveDisplayGeometry {
   private static long entityLoopStarted, entityLoopNanos, entityLoopTotal, entityLoopFrames;
   private static final long MOVING_REFRESH = 50_000_000L, STABLE_REFRESH = 1_000_000_000L;
   private static final double MOVING_MARGIN = 1, STABLE_MARGIN = 0.5;
+  private static final Matrix4f poseBase = new Matrix4f(), poseScratch = new Matrix4f();
+  private static final Quaternionf poseOrientation = new Quaternionf();
+
+  /** Fixtures: keep the ordinary path and compare the direct pose with it on every frame. */
+  static boolean verifyPoses;
+
+  private static long poseChecks, poseMismatches;
+  private static int poseFast, poseRejected;
+  private static long poseFastTotal;
   private static int culled;
   private static long culledTotal;
 
@@ -126,6 +138,8 @@ public final class LiveDisplayGeometry {
     entityLoopStarted = entityLoopNanos = entityLoopTotal = entityLoopFrames = 0;
     culled = 0;
     culledTotal = 0;
+    poseFast = poseRejected = 0;
+    poseFastTotal = poseChecks = poseMismatches = 0;
     pose = new PoseStack();
   }
 
@@ -161,7 +175,7 @@ public final class LiveDisplayGeometry {
     activeBatches.clear();
     visibleVertices = interpolatingParts = 0;
     visibleMeshCount = 0;
-    poseReused = poseSubmitted = 0;
+    poseReused = poseSubmitted = poseFast = 0;
     for (var type : batches.values()) {
       type.count = 0;
       for (var batch : type.chunks) batch.used = 0;
@@ -244,6 +258,7 @@ public final class LiveDisplayGeometry {
     long start = System.nanoTime();
     boolean sample = Observation.get().sampling();
     long eligibilityNanos = 0, poseNanos = 0, groupNanos = 0;
+    boolean fastPoses = DrawLessConfig.get().livePoseFastPath && !verifyPoses;
     try (var ignored = Observation.get().scope("render/liveDisplay/capture")) {
       for (var renderState : state.entityRenderStates) {
         var entity = extracted.get(renderState);
@@ -266,6 +281,11 @@ public final class LiveDisplayGeometry {
               reason = part.reason;
               poseReused++;
               poseReusedTotal++;
+            } else if (fastPoses && part.posable(item)) {
+              part.repose(client, item);
+              reason = Reason.READY;
+              poseFast++;
+              poseFastTotal++;
             } else {
               capture.reset(part);
               // Capture around the entity origin. Camera/actor/passenger translation is
@@ -290,6 +310,8 @@ public final class LiveDisplayGeometry {
                   reason,
                   client.getEntityRenderDispatcher().getRenderer(item).getClass()
                       == DisplayRenderer.ItemDisplayRenderer.class);
+              if (reason == Reason.READY && part.replayable) part.learnPose(client, item);
+              else part.poseKnown = part.poseValid = false;
               poseSubmitted++;
               poseSubmittedTotal++;
             }
@@ -452,7 +474,7 @@ public final class LiveDisplayGeometry {
       if (reasons[r.ordinal()] > 0) reasonsText.add(r.label + ":" + reasons[r.ordinal()]);
     return String.format(
             Locale.ROOT,
-            "%s; status=%s; meshes=%d; quadSets=%d; aliases=%d; parts=%d; interpolatingParts=%d; visibleMeshes=%d; visibleVertices=%d; instances=%d; culled=%d; culledTotal=%d; quads=%d; draws=%d; fallback=%d; localBytes=%d; indexBytes=%d; meshBuilds=%d; indexRebuilds=%d; geometryUploads=%d; geometryUploadedBytes=%d; instanceUploadedBytes=%d; animatedSprites=%d; poseReused=%d; poseSubmitted=%d; poseReusedTotal=%d; poseSubmittedTotal=%d; capture=%.3fms; upload=%.3fms; drawCpu=%.3fms; framesTotal=%d; captureTotalMs=%.3f; uploadTotalMs=%.3f; drawTotalMs=%.3f; admission=%s",
+            "%s; status=%s; meshes=%d; quadSets=%d; aliases=%d; parts=%d; interpolatingParts=%d; visibleMeshes=%d; visibleVertices=%d; instances=%d; culled=%d; culledTotal=%d; poseFast=%d; poseFastTotal=%d; poseRejected=%d; poseChecks=%d; poseMismatches=%d; quads=%d; draws=%d; fallback=%d; localBytes=%d; indexBytes=%d; meshBuilds=%d; indexRebuilds=%d; geometryUploads=%d; geometryUploadedBytes=%d; instanceUploadedBytes=%d; animatedSprites=%d; poseReused=%d; poseSubmitted=%d; poseReusedTotal=%d; poseSubmittedTotal=%d; capture=%.3fms; upload=%.3fms; drawCpu=%.3fms; framesTotal=%d; captureTotalMs=%.3f; uploadTotalMs=%.3f; drawTotalMs=%.3f; admission=%s",
             liveMode == null ? DrawLessConfig.get().extremeDisplayMode : liveMode,
             enabled
                 ? "on"
@@ -469,6 +491,11 @@ public final class LiveDisplayGeometry {
             instances,
             culled,
             culledTotal,
+            poseFast,
+            poseFastTotal,
+            poseRejected,
+            poseChecks,
+            poseMismatches,
             quads,
             draws,
             fallbacks,
@@ -542,7 +569,8 @@ public final class LiveDisplayGeometry {
 
   private static final class Part {
     final ArrayList<Instance> instances = new ArrayList<>();
-    int used, seen;
+    int used, seen, poseUsed;
+    boolean poseRejectedOnce;
     long indexBytes;
 
     /** Bounds around the entity origin at the last pose, and when they were last confirmed. */
@@ -550,6 +578,11 @@ public final class LiveDisplayGeometry {
 
     long boundsChecked;
     boolean moving;
+
+    /**
+     * Rest matrices were learned from a vanilla pose; poseValid once a second one confirmed them.
+     */
+    boolean poseKnown, poseValid;
 
     ItemStackRenderState layers;
     Display.RenderState render;
@@ -593,6 +626,70 @@ public final class LiveDisplayGeometry {
           indexBytes += (long) instances.get(i).item.vertexCount / 4 * 6 * 4;
         measure(state);
       }
+    }
+
+    /** Only the interpolated transform or the billboard changed since the vanilla pose. */
+    boolean posable(ItemDisplayEntityRenderState state) {
+      return poseValid
+          && replayable
+          && reason == Reason.READY
+          && layers == state.item
+          && render == state.renderState;
+    }
+
+    private static void poseBase(Minecraft client, ItemDisplayEntityRenderState state) {
+      var renderer =
+          (DisplayOrientationAccessor) client.getEntityRenderDispatcher().getRenderer(state);
+      var render = state.renderState;
+      renderer.drawless$orientation(render, state, poseOrientation.identity());
+      poseBase
+          .rotation(poseOrientation)
+          .mul(render.transformation().get(state.interpolationProgress).getMatrix());
+    }
+
+    /** The pose vanilla would produce: orientation, then transform, then the unchanged rest. */
+    void repose(Minecraft client, ItemDisplayEntityRenderState state) {
+      poseBase(client, state);
+      for (int i = 0; i < used; i++) {
+        var instance = instances.get(i);
+        instance.setPose(poseBase.mul(instance.rest, poseScratch));
+        instance.relocate();
+      }
+      interpolation = state.interpolationProgress;
+      yRot = state.entityYRot;
+      xRot = state.entityXRot;
+      cameraXRot = state.cameraXRot;
+      cameraYRot = state.cameraYRot;
+      measure(state);
+    }
+
+    /**
+     * Derives each instance's rest from the pose vanilla just produced. Before replacing a learned
+     * rest it must predict this pose; a part that fails or cannot be inverted stays on the ordinary
+     * path, so anything this model of the pose misses costs time, not pixels.
+     */
+    void learnPose(Minecraft client, ItemDisplayEntityRenderState state) {
+      poseBase(client, state);
+      boolean matches = poseKnown && poseUsed == used;
+      if (poseKnown && poseUsed == used) {
+        poseChecks++;
+        for (int i = 0; i < used && matches; i++) matches = instances.get(i).predicts(poseBase);
+        if (!matches) {
+          poseMismatches++;
+          if (poseValid || !poseRejectedOnce) poseRejected++;
+          poseRejectedOnce = true;
+        }
+      }
+      poseValid = matches && !poseRejectedOnce;
+      float determinant = poseBase.determinant3x3();
+      if (!Float.isFinite(determinant) || Math.abs(determinant) < 1e-9f) {
+        poseKnown = poseValid = false;
+        return;
+      }
+      poseBase.invert(poseScratch);
+      for (int i = 0; i < used; i++) instances.get(i).learnRest(poseScratch);
+      poseUsed = used;
+      poseKnown = true;
     }
 
     private void measure(ItemDisplayEntityRenderState state) {
@@ -648,6 +745,41 @@ public final class LiveDisplayGeometry {
       localX = transform.m30();
       localY = transform.m31();
       localZ = transform.m32();
+    }
+
+    /** The pose of this instance relative to the display's orientation and transform. */
+    final Matrix4f rest = new Matrix4f();
+
+    private static final Matrix4f scratch = new Matrix4f();
+    private static final float[] expectedNormals = new float[9];
+
+    void relocate() {
+      localX = transform.m30();
+      localY = transform.m31();
+      localZ = transform.m32();
+    }
+
+    void learnRest(Matrix4f inverseBase) {
+      inverseBase.mul(transform, rest);
+    }
+
+    /** Called with the fresh vanilla pose in place, before the rest is replaced. */
+    boolean predicts(Matrix4f base) {
+      base.mul(rest, scratch);
+      for (int column = 0; column < 4; column++)
+        for (int row = 0; row < 3; row++) {
+          float expected = transform.get(column, row);
+          if (Math.abs(scratch.get(column, row) - expected)
+              > 1e-4f * Math.max(1, Math.abs(expected))) return false;
+        }
+      System.arraycopy(normals, 0, expectedNormals, 0, 9);
+      var vanilla = transform.get(new Matrix4f());
+      setPose(scratch);
+      boolean same = true;
+      for (int i = 0; i < 9; i++) same &= Math.abs(normals[i] - expectedNormals[i]) <= 2.5f / 127;
+      transform.set(vanilla);
+      System.arraycopy(expectedNormals, 0, normals, 0, 9);
+      return same;
     }
 
     void position(float x, float y, float z, int light) {
