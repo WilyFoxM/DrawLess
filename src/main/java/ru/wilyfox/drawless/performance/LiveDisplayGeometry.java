@@ -628,13 +628,18 @@ public final class LiveDisplayGeometry {
       }
     }
 
-    /** Only the interpolated transform or the billboard changed since the vanilla pose. */
+    /**
+     * Only the interpolated transform or the billboard changed since the vanilla pose. The pose an
+     * animation ends on is taken from vanilla once: the direct pose matches it only to float
+     * rounding, which can move an edge pixel, and the resting pose is reused until it changes.
+     */
     boolean posable(ItemDisplayEntityRenderState state) {
       return poseValid
           && replayable
           && reason == Reason.READY
           && layers == state.item
-          && render == state.renderState;
+          && render == state.renderState
+          && state.interpolationProgress < 1;
     }
 
     private static void poseBase(Minecraft client, ItemDisplayEntityRenderState state) {
