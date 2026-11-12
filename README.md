@@ -140,3 +140,7 @@ adjustment, raw measurements, conditions and limitations.
 - **fzzyhmstrs and Particle Core contributors** —
   [Particle Core's position and tick-light reuse approaches](https://github.com/fzzyhmstrs/pc/tree/4b821baae8ffb86b6c180fdf1235e8c2f0bbfd94/src/main/java/me/fzzyhmstrs/particle_core/mixins)
   provided inspiration for DrawLess's particle position, light reuse and collision work.
+
+## License
+
+The code is under the MIT license. The mod icon and the banner are simplified recolors of a Minecraft texture, which belongs to Mojang, and are not covered by that license.
