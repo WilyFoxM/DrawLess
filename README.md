@@ -1,13 +1,13 @@
 <p align="center">
-  <img src="docs/banner.webp" alt="DrawLess" width="100%">
+  <img src="docs/banner.png" alt="DrawLess" width="100%">
 </p>
 
 <p align="center">
-  <a href="https://github.com/WilyFoxM/DrawLess/releases/latest"><img src="https://img.shields.io/github/v/release/WilyFoxM/DrawLess?label=release&labelColor=0a182a&color=fda24c" alt="Latest release"></a>
-  <a href="https://github.com/WilyFoxM/DrawLess/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/WilyFoxM/DrawLess/build.yml?branch=main&label=build&labelColor=0a182a" alt="Build"></a>
-  <img src="https://img.shields.io/badge/Minecraft-26.2-7dcfb6?labelColor=0a182a" alt="Minecraft 26.2">
-  <img src="https://img.shields.io/badge/loader-Fabric-7dcfb6?labelColor=0a182a" alt="Fabric">
-  <img src="https://img.shields.io/badge/Java-25-7dcfb6?labelColor=0a182a" alt="Java 25">
+  <a href="https://github.com/WilyFoxM/DrawLess/releases/latest"><img src="https://img.shields.io/github/v/release/WilyFoxM/DrawLess?label=release&labelColor=2e4056&color=546b88" alt="Latest release"></a>
+  <a href="https://github.com/WilyFoxM/DrawLess/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/WilyFoxM/DrawLess/build.yml?branch=main&label=build&labelColor=2e4056" alt="Build"></a>
+  <img src="https://img.shields.io/badge/Minecraft-26.2-546b88?labelColor=2e4056" alt="Minecraft 26.2">
+  <img src="https://img.shields.io/badge/loader-Fabric-546b88?labelColor=2e4056" alt="Fabric">
+  <img src="https://img.shields.io/badge/Java-25-546b88?labelColor=2e4056" alt="Java 25">
 </p>
 
 # DrawLess
